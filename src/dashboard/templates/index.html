@@ -58,7 +58,7 @@
 
     <main class="max-w-7xl mx-auto px-6 py-6 space-y-6">
         <!-- Stats Cards -->
-        <div class="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-4">
+        <div class="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-7 gap-4">
             <div class="bg-gray-900 rounded-xl p-4 border border-gray-800">
                 <div class="text-xs text-gray-500 uppercase tracking-wide">Scanned</div>
                 <div id="stat-scanned" class="text-2xl font-bold text-white mt-1">0</div>
@@ -78,6 +78,10 @@
             <div class="bg-gray-900 rounded-xl p-4 border border-gray-800">
                 <div class="text-xs text-gray-500 uppercase tracking-wide">Today</div>
                 <div id="stat-today" class="text-2xl font-bold text-purple-400 mt-1">0</div>
+            </div>
+            <div class="bg-gray-900 rounded-xl p-4 border border-gray-800">
+                <div class="text-xs text-gray-500 uppercase tracking-wide">Atoms 🌱🌿🌳</div>
+                <div id="stat-atoms" class="text-2xl font-bold text-emerald-400 mt-1">0</div>
             </div>
             <div class="bg-gray-900 rounded-xl p-4 border border-gray-800">
                 <div class="text-xs text-gray-500 uppercase tracking-wide">Cost</div>
@@ -138,6 +142,38 @@
                     </thead>
                     <tbody id="posts-table" class="divide-y divide-gray-800">
                         <tr><td colspan="5" class="px-4 py-8 text-center text-gray-600">No posts yet</td></tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- Atom Notes Browser -->
+        <div class="bg-gray-900 rounded-xl border border-gray-800">
+            <div class="px-4 py-3 border-b border-gray-800 flex items-center justify-between">
+                <h2 class="text-sm font-semibold text-gray-300 uppercase tracking-wide">🧠 Atom Notes (Knowledge Base)</h2>
+                <div class="flex gap-2">
+                    <select id="atom-filter" onchange="loadAtoms()" class="text-xs bg-gray-800 border border-gray-700 text-gray-300 rounded px-2 py-1">
+                        <option value="">All</option>
+                        <option value="seedling">🌱 Seedling</option>
+                        <option value="budding">🌿 Budding</option>
+                        <option value="evergreen">🌳 Evergreen</option>
+                    </select>
+                    <button onclick="loadAtoms()" class="text-xs text-blue-400 hover:text-blue-300">Refresh</button>
+                </div>
+            </div>
+            <div class="overflow-x-auto">
+                <table class="w-full text-sm">
+                    <thead>
+                        <tr class="text-xs text-gray-500 uppercase border-b border-gray-800">
+                            <th class="px-4 py-2 text-left w-8">성숙도</th>
+                            <th class="px-4 py-2 text-left">개념</th>
+                            <th class="px-4 py-2 text-left w-20">링크</th>
+                            <th class="px-4 py-2 text-left w-20">출처</th>
+                            <th class="px-4 py-2 text-left w-24">갱신</th>
+                        </tr>
+                    </thead>
+                    <tbody id="atoms-table" class="divide-y divide-gray-800">
+                        <tr><td colspan="5" class="px-4 py-8 text-center text-gray-600">Loading atoms...</td></tr>
                     </tbody>
                 </table>
             </div>
@@ -233,6 +269,9 @@
         document.getElementById('stat-rate').textContent = data.relevance_rate || 'N/A';
         document.getElementById('stat-queue').textContent = (data.queue_size || 0).toLocaleString();
         document.getElementById('stat-today').textContent = (data.posts_saved_today || 0).toLocaleString();
+        if (data.atom_count !== undefined) {
+            document.getElementById('stat-atoms').textContent = data.atom_count;
+        }
 
         // Cost
         if (data.token_usage) {
@@ -360,15 +399,64 @@
         }
     }
 
+    // ── Atoms ──
+    async function loadAtoms() {
+        try {
+            const res = await fetch('/api/atoms');
+            const atoms = await res.json();
+            const tbody = document.getElementById('atoms-table');
+            const filter = document.getElementById('atom-filter').value;
+
+            const filtered = filter ? atoms.filter(a => a.maturity === filter) : atoms;
+
+            // Update stat
+            const counts = {seedling: 0, budding: 0, evergreen: 0};
+            atoms.forEach(a => { if (counts[a.maturity] !== undefined) counts[a.maturity]++; });
+            document.getElementById('stat-atoms').textContent =
+                `🌱${counts.seedling} 🌿${counts.budding} 🌳${counts.evergreen}`;
+
+            if (!filtered.length) {
+                tbody.innerHTML = '<tr><td colspan="5" class="px-4 py-8 text-center text-gray-600">No atoms yet</td></tr>';
+                return;
+            }
+
+            const emoji = { seedling: '🌱', budding: '🌿', evergreen: '🌳' };
+            tbody.innerHTML = filtered.slice(0, 80).map(a => {
+                return `<tr class="hover:bg-gray-800/50 cursor-pointer" onclick="openAtom('${escapeHtml(a.id)}')">
+                    <td class="px-4 py-2 text-center">${emoji[a.maturity] || '📄'}</td>
+                    <td class="px-4 py-2 text-gray-300 max-w-md">${escapeHtml(a.concept)}</td>
+                    <td class="px-4 py-2 text-xs text-gray-500 text-center">${a.related_count}</td>
+                    <td class="px-4 py-2 text-xs text-gray-500 text-center">${a.source_count}</td>
+                    <td class="px-4 py-2 text-xs text-gray-600">${escapeHtml(a.updated || '')}</td>
+                </tr>`;
+            }).join('');
+        } catch(e) { console.error(e); }
+    }
+
+    async function openAtom(atomId) {
+        try {
+            const res = await fetch(`/api/atoms/${atomId}`);
+            const data = await res.json();
+            const meta = data.metadata || {};
+            const emoji = { seedling: '🌱', budding: '🌿', evergreen: '🌳' };
+            document.getElementById('modal-title').textContent =
+                `${emoji[meta.maturity] || ''} ${meta.concept || atomId}`;
+            const content = `ID: ${meta.id || atomId}\nMaturity: ${meta.maturity} | TTL: ${meta.ttl_days}d\nCreated: ${meta.created} | Updated: ${meta.updated}\nSources: ${(meta.sources||[]).length} | Related: ${(meta.related||[]).join(', ') || 'none'}\n\n---\n\n${data.content || ''}`;
+            document.getElementById('modal-content').textContent = content;
+            document.getElementById('file-modal').classList.remove('hidden');
+        } catch(e) { console.error(e); }
+    }
+
     // ── Init ──
     fetchStatus();
     loadKnowledgeTree();
     loadRecentPosts();
+    loadAtoms();
 
     // Auto-refresh every 5 seconds
     refreshInterval = setInterval(fetchStatus, 5000);
     // Refresh posts and tree less frequently
-    setInterval(() => { loadRecentPosts(); loadKnowledgeTree(); }, 30000);
+    setInterval(() => { loadRecentPosts(); loadKnowledgeTree(); loadAtoms(); }, 30000);
     </script>
 </body>
 </html>

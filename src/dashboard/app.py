@@ -92,6 +92,24 @@ def create_app() -> FastAPI:
         tree = _build_tree(KNOWLEDGE_DIR)
         return JSONResponse(tree)
 
+    @app.get("/api/atoms")
+    async def api_atoms():
+        """Get all atom notes (lightweight metadata list)."""
+        from src.knowledge.store import KnowledgeStore
+        store = KnowledgeStore()
+        atoms = store.get_all_atoms()
+        return JSONResponse(atoms)
+
+    @app.get("/api/atoms/{atom_id}")
+    async def api_atom_detail(atom_id: str):
+        """Get full content of a single atom note."""
+        from src.knowledge.store import KnowledgeStore
+        store = KnowledgeStore()
+        data = store.get_atom_by_id(atom_id)
+        if not data:
+            return JSONResponse({"error": "Atom not found"}, status_code=404)
+        return JSONResponse(data)
+
     return app
 
 

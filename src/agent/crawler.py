@@ -11,6 +11,8 @@ from src.browser.navigator import Navigator
 from src.browser.extractor import ContentExtractor
 from src.agent.relevance import RelevanceJudge
 from src.agent.synthesizer import KnowledgeSynthesizer
+from src.agent.weekly_synthesizer import WeeklySynthesizer
+from src.agent.monthly_synthesizer import MonthlySynthesizer
 from src.knowledge.store import KnowledgeStore
 from src.knowledge.queue import ExplorationQueue
 from src.knowledge.models import (
@@ -38,6 +40,8 @@ class LinkedInCrawler:
         self.token_usage = TokenUsage()
         self.relevance = RelevanceJudge(token_usage=self.token_usage)
         self.synthesizer = KnowledgeSynthesizer(store=self.store, token_usage=self.token_usage)
+        self.weekly_synthesizer = WeeklySynthesizer(store=self.store, token_usage=self.token_usage)
+        self.monthly_synthesizer = MonthlySynthesizer(store=self.store, token_usage=self.token_usage)
 
         # State
         self.stats = AgentStats()
@@ -47,6 +51,8 @@ class LinkedInCrawler:
         self._stop_requested = False
         self._pause_requested = False
         self._last_synthesis_time: datetime | None = None
+        self._last_weekly_time: datetime | None = None
+        self._last_monthly_time: datetime | None = None
 
     @property
     def is_running(self) -> bool:
@@ -356,11 +362,54 @@ class LinkedInCrawler:
                 self.stats.last_synthesis_at = self._last_synthesis_time.isoformat()
                 self.stats.posts_since_last_synthesis = 0
                 self._pending_relevant_posts = []
-
                 self._log("info", "synthesis_done", f"Synthesis complete: {results}")
             except Exception as e:
                 self._log("error", "synthesis_error", f"Synthesis failed: {e}")
 
+            self.stats.status = AgentStatus.RUNNING
+
+        # Weekly synthesis — every Monday or 7 days since last
+        now = datetime.now()
+        should_weekly = False
+        if self._last_weekly_time is None:
+            # First run: trigger on Monday or after 7 days of data
+            atoms = self.store.get_all_atoms()
+            if len(atoms) >= 5 and now.weekday() == 0:  # Monday
+                should_weekly = True
+        elif (now - self._last_weekly_time).days >= 7:
+            should_weekly = True
+
+        if should_weekly:
+            self._log("info", "weekly_synthesis_start", "Starting weekly synthesis...")
+            self.stats.status = AgentStatus.SYNTHESIZING
+            self.stats.current_action = "Weekly knowledge map..."
+            try:
+                await self.weekly_synthesizer.run()
+                self._last_weekly_time = now
+                self._log("info", "weekly_synthesis_done", "Weekly map complete.")
+            except Exception as e:
+                self._log("error", "weekly_synthesis_error", f"Weekly synthesis failed: {e}")
+            self.stats.status = AgentStatus.RUNNING
+
+        # Monthly synthesis — 1st of month or 30+ days since last
+        should_monthly = False
+        if self._last_monthly_time is None:
+            atoms = self.store.get_all_atoms()
+            if len(atoms) >= 10 and now.day == 1:
+                should_monthly = True
+        elif (now - self._last_monthly_time).days >= 30:
+            should_monthly = True
+
+        if should_monthly:
+            self._log("info", "monthly_synthesis_start", "Starting monthly synthesis...")
+            self.stats.status = AgentStatus.SYNTHESIZING
+            self.stats.current_action = "Monthly knowledge map..."
+            try:
+                await self.monthly_synthesizer.run()
+                self._last_monthly_time = now
+                self._log("info", "monthly_synthesis_done", "Monthly map complete.")
+            except Exception as e:
+                self._log("error", "monthly_synthesis_error", f"Monthly synthesis failed: {e}")
             self.stats.status = AgentStatus.RUNNING
 
     def _log(self, level: str, action: str, detail: str) -> None:
@@ -396,6 +445,7 @@ class LinkedInCrawler:
             ),
             "posts_since_last_synthesis": self.stats.posts_since_last_synthesis,
             "last_synthesis_at": self.stats.last_synthesis_at or "Not yet",
+            "atom_count": len(self.store.get_all_atoms()),
             "queue_size": self.queue.size,
             "queue_stats": self.queue.get_stats(),
             "current_action": self.stats.current_action,
