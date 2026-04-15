@@ -1,0 +1,28 @@
+[project]
+name = "linkedin-researcher"
+version = "0.1.0"
+description = "LinkedIn AX Research Agent - Autonomous browsing, relevance judgment, and knowledge synthesis"
+requires-python = ">=3.12"
+dependencies = [
+    "playwright>=1.49",
+    "openai>=1.60",
+    "fastapi>=0.115",
+    "uvicorn[standard]>=0.34",
+    "jinja2>=3.1",
+    "python-frontmatter>=1.1",
+    "pydantic>=2.10",
+    "pydantic-settings>=2.7",
+    "python-dotenv>=1.0",
+    "aiofiles>=24.1",
+    "httpx>=0.28",
+]
+
+[project.scripts]
+linkedin-researcher = "src.main:main"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src"]
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"

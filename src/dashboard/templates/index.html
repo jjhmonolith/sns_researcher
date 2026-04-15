@@ -1,0 +1,374 @@
+<!DOCTYPE html>
+<html lang="ko" class="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>LinkedIn AX Research Agent</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    colors: {
+                        brand: { 50:'#eff6ff', 100:'#dbeafe', 500:'#3b82f6', 600:'#2563eb', 700:'#1d4ed8' }
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        @keyframes pulse-dot { 0%,100%{opacity:1} 50%{opacity:.4} }
+        .pulse-dot { animation: pulse-dot 1.5s ease-in-out infinite; }
+        .log-info { color: #93c5fd; }
+        .log-warning { color: #fbbf24; }
+        .log-error { color: #f87171; }
+        #activity-log { max-height: 400px; overflow-y: auto; }
+        #activity-log::-webkit-scrollbar { width: 6px; }
+        #activity-log::-webkit-scrollbar-thumb { background: #374151; border-radius: 3px; }
+        .tree-toggle { cursor: pointer; user-select: none; }
+        .tree-children { padding-left: 1.25rem; }
+        .file-link { cursor: pointer; }
+        .file-link:hover { text-decoration: underline; }
+    </style>
+</head>
+<body class="bg-gray-950 text-gray-200 min-h-screen">
+    <!-- Header -->
+    <header class="bg-gray-900 border-b border-gray-800 px-6 py-4">
+        <div class="max-w-7xl mx-auto flex items-center justify-between">
+            <div>
+                <h1 class="text-xl font-bold text-white">LinkedIn AX Research Agent</h1>
+                <p class="text-sm text-gray-400 mt-1">Enterprise AI Transformation</p>
+            </div>
+            <div class="flex items-center gap-3">
+                <span id="status-badge" class="px-3 py-1 rounded-full text-sm font-medium bg-gray-700 text-gray-300">
+                    Loading...
+                </span>
+                <button onclick="togglePause()" id="btn-pause"
+                    class="px-4 py-2 bg-yellow-600 hover:bg-yellow-700 text-white text-sm rounded-lg transition">
+                    Pause
+                </button>
+                <button onclick="requestStop()" id="btn-stop"
+                    class="px-4 py-2 bg-red-600 hover:bg-red-700 text-white text-sm rounded-lg transition">
+                    Stop
+                </button>
+            </div>
+        </div>
+    </header>
+
+    <main class="max-w-7xl mx-auto px-6 py-6 space-y-6">
+        <!-- Stats Cards -->
+        <div class="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-4">
+            <div class="bg-gray-900 rounded-xl p-4 border border-gray-800">
+                <div class="text-xs text-gray-500 uppercase tracking-wide">Scanned</div>
+                <div id="stat-scanned" class="text-2xl font-bold text-white mt-1">0</div>
+            </div>
+            <div class="bg-gray-900 rounded-xl p-4 border border-gray-800">
+                <div class="text-xs text-gray-500 uppercase tracking-wide">Relevant</div>
+                <div id="stat-relevant" class="text-2xl font-bold text-green-400 mt-1">0</div>
+            </div>
+            <div class="bg-gray-900 rounded-xl p-4 border border-gray-800">
+                <div class="text-xs text-gray-500 uppercase tracking-wide">Rate</div>
+                <div id="stat-rate" class="text-2xl font-bold text-blue-400 mt-1">N/A</div>
+            </div>
+            <div class="bg-gray-900 rounded-xl p-4 border border-gray-800">
+                <div class="text-xs text-gray-500 uppercase tracking-wide">Queue</div>
+                <div id="stat-queue" class="text-2xl font-bold text-orange-400 mt-1">0</div>
+            </div>
+            <div class="bg-gray-900 rounded-xl p-4 border border-gray-800">
+                <div class="text-xs text-gray-500 uppercase tracking-wide">Today</div>
+                <div id="stat-today" class="text-2xl font-bold text-purple-400 mt-1">0</div>
+            </div>
+            <div class="bg-gray-900 rounded-xl p-4 border border-gray-800">
+                <div class="text-xs text-gray-500 uppercase tracking-wide">Cost</div>
+                <div id="stat-cost" class="text-2xl font-bold text-yellow-400 mt-1">$0.00</div>
+            </div>
+        </div>
+
+        <!-- Current Action -->
+        <div class="bg-gray-900 rounded-xl p-4 border border-gray-800">
+            <div class="flex items-center gap-2">
+                <div id="action-indicator" class="w-2 h-2 rounded-full bg-green-500 pulse-dot"></div>
+                <span class="text-xs text-gray-500 uppercase tracking-wide">Current Action</span>
+            </div>
+            <div id="current-action" class="text-sm text-gray-300 mt-2 font-mono">Waiting...</div>
+            <div id="current-url" class="text-xs text-gray-600 mt-1 font-mono truncate"></div>
+        </div>
+
+        <!-- Two Column Layout -->
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            <!-- Activity Log -->
+            <div class="bg-gray-900 rounded-xl border border-gray-800">
+                <div class="px-4 py-3 border-b border-gray-800">
+                    <h2 class="text-sm font-semibold text-gray-300 uppercase tracking-wide">Activity Log</h2>
+                </div>
+                <div id="activity-log" class="p-4 space-y-1 font-mono text-xs">
+                    <div class="text-gray-600">Waiting for agent to start...</div>
+                </div>
+            </div>
+
+            <!-- Knowledge Base Browser -->
+            <div class="bg-gray-900 rounded-xl border border-gray-800">
+                <div class="px-4 py-3 border-b border-gray-800 flex items-center justify-between">
+                    <h2 class="text-sm font-semibold text-gray-300 uppercase tracking-wide">Knowledge Base</h2>
+                    <button onclick="loadKnowledgeTree()" class="text-xs text-blue-400 hover:text-blue-300">Refresh</button>
+                </div>
+                <div id="knowledge-tree" class="p-4 text-sm space-y-1">
+                    <div class="text-gray-600">Loading...</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Recent Posts Table -->
+        <div class="bg-gray-900 rounded-xl border border-gray-800">
+            <div class="px-4 py-3 border-b border-gray-800 flex items-center justify-between">
+                <h2 class="text-sm font-semibold text-gray-300 uppercase tracking-wide">Recent Relevant Posts</h2>
+                <button onclick="loadRecentPosts()" class="text-xs text-blue-400 hover:text-blue-300">Refresh</button>
+            </div>
+            <div class="overflow-x-auto">
+                <table class="w-full text-sm">
+                    <thead>
+                        <tr class="text-xs text-gray-500 uppercase border-b border-gray-800">
+                            <th class="px-4 py-3 text-left">Score</th>
+                            <th class="px-4 py-3 text-left">Author</th>
+                            <th class="px-4 py-3 text-left">Summary</th>
+                            <th class="px-4 py-3 text-left">Topics</th>
+                            <th class="px-4 py-3 text-left">Source</th>
+                        </tr>
+                    </thead>
+                    <tbody id="posts-table" class="divide-y divide-gray-800">
+                        <tr><td colspan="5" class="px-4 py-8 text-center text-gray-600">No posts yet</td></tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- Token Usage Details -->
+        <div class="bg-gray-900 rounded-xl border border-gray-800 p-4">
+            <h2 class="text-sm font-semibold text-gray-300 uppercase tracking-wide mb-3">Token Usage</h2>
+            <div class="grid grid-cols-2 md:grid-cols-4 gap-4 text-xs">
+                <div>
+                    <span class="text-gray-500">Nano Input</span>
+                    <div id="token-nano-in" class="text-gray-300 font-mono">0</div>
+                </div>
+                <div>
+                    <span class="text-gray-500">Nano Output</span>
+                    <div id="token-nano-out" class="text-gray-300 font-mono">0</div>
+                </div>
+                <div>
+                    <span class="text-gray-500">GPT-5.4 Input</span>
+                    <div id="token-pow-in" class="text-gray-300 font-mono">0</div>
+                </div>
+                <div>
+                    <span class="text-gray-500">GPT-5.4 Output</span>
+                    <div id="token-pow-out" class="text-gray-300 font-mono">0</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- File Viewer Modal -->
+        <div id="file-modal" class="hidden fixed inset-0 bg-black/70 z-50 flex items-center justify-center p-4">
+            <div class="bg-gray-900 rounded-xl border border-gray-700 w-full max-w-3xl max-h-[80vh] flex flex-col">
+                <div class="px-4 py-3 border-b border-gray-700 flex items-center justify-between">
+                    <h3 id="modal-title" class="text-sm font-semibold text-gray-300 truncate"></h3>
+                    <button onclick="closeModal()" class="text-gray-500 hover:text-gray-300 text-xl">&times;</button>
+                </div>
+                <div id="modal-content" class="p-4 overflow-y-auto text-sm font-mono whitespace-pre-wrap text-gray-300"></div>
+            </div>
+        </div>
+    </main>
+
+    <script>
+    // ── Auto-refresh status ──
+    let refreshInterval = null;
+
+    async function fetchStatus() {
+        try {
+            const res = await fetch('/api/status');
+            const data = await res.json();
+            updateDashboard(data);
+        } catch (e) {
+            console.error('Status fetch error:', e);
+        }
+    }
+
+    function updateDashboard(data) {
+        // Status badge
+        const badge = document.getElementById('status-badge');
+        const statusColors = {
+            running: 'bg-green-600 text-green-100',
+            paused: 'bg-yellow-600 text-yellow-100',
+            synthesizing: 'bg-purple-600 text-purple-100',
+            waiting_login: 'bg-blue-600 text-blue-100',
+            initializing: 'bg-blue-600 text-blue-100',
+            error: 'bg-red-600 text-red-100',
+            stopped: 'bg-gray-600 text-gray-300',
+            not_started: 'bg-gray-700 text-gray-400',
+        };
+        const statusLabels = {
+            running: 'Running',
+            paused: 'Paused',
+            synthesizing: 'Synthesizing',
+            waiting_login: 'Waiting for Login',
+            initializing: 'Initializing',
+            error: 'Error',
+            stopped: 'Stopped',
+            not_started: 'Not Started',
+        };
+        const st = data.status || 'not_started';
+        badge.className = `px-3 py-1 rounded-full text-sm font-medium ${statusColors[st] || statusColors.not_started}`;
+        badge.textContent = statusLabels[st] || st;
+
+        // Indicator
+        const indicator = document.getElementById('action-indicator');
+        indicator.className = st === 'running' ? 'w-2 h-2 rounded-full bg-green-500 pulse-dot' :
+                              st === 'paused' ? 'w-2 h-2 rounded-full bg-yellow-500' :
+                              'w-2 h-2 rounded-full bg-gray-600';
+
+        if (data.status === 'not_started') return;
+
+        // Stats
+        document.getElementById('stat-scanned').textContent = (data.total_posts_scanned || 0).toLocaleString();
+        document.getElementById('stat-relevant').textContent = (data.relevant_posts_found || 0).toLocaleString();
+        document.getElementById('stat-rate').textContent = data.relevance_rate || 'N/A';
+        document.getElementById('stat-queue').textContent = (data.queue_size || 0).toLocaleString();
+        document.getElementById('stat-today').textContent = (data.posts_saved_today || 0).toLocaleString();
+
+        // Cost
+        if (data.token_usage) {
+            document.getElementById('stat-cost').textContent = data.token_usage.total_cost || '$0.00';
+            document.getElementById('token-nano-in').textContent = (data.token_usage.nano_input || 0).toLocaleString();
+            document.getElementById('token-nano-out').textContent = (data.token_usage.nano_output || 0).toLocaleString();
+            document.getElementById('token-pow-in').textContent = (data.token_usage.powerful_input || 0).toLocaleString();
+            document.getElementById('token-pow-out').textContent = (data.token_usage.powerful_output || 0).toLocaleString();
+        }
+
+        // Current action
+        document.getElementById('current-action').textContent = data.current_action || 'Idle';
+        document.getElementById('current-url').textContent = data.current_url || '';
+
+        // Activity log
+        if (data.activity_log && data.activity_log.length > 0) {
+            const logDiv = document.getElementById('activity-log');
+            logDiv.innerHTML = data.activity_log.slice().reverse().map(entry => {
+                const time = new Date(entry.timestamp).toLocaleTimeString();
+                return `<div class="log-${entry.level}"><span class="text-gray-600">${time}</span> [${entry.action}] ${escapeHtml(entry.detail)}</div>`;
+            }).join('');
+        }
+    }
+
+    function escapeHtml(text) {
+        const div = document.createElement('div');
+        div.textContent = text;
+        return div.innerHTML;
+    }
+
+    // ── Controls ──
+    async function togglePause() {
+        try {
+            await fetch('/api/pause', { method: 'POST' });
+            fetchStatus();
+        } catch (e) { console.error(e); }
+    }
+
+    async function requestStop() {
+        if (!confirm('Are you sure you want to stop the agent?')) return;
+        try {
+            await fetch('/api/stop', { method: 'POST' });
+            fetchStatus();
+        } catch (e) { console.error(e); }
+    }
+
+    // ── Knowledge Tree ──
+    async function loadKnowledgeTree() {
+        try {
+            const res = await fetch('/api/knowledge');
+            const tree = await res.json();
+            const container = document.getElementById('knowledge-tree');
+            container.innerHTML = renderTree(tree);
+        } catch (e) {
+            console.error('Knowledge tree error:', e);
+        }
+    }
+
+    function renderTree(items, depth = 0) {
+        if (!items || items.length === 0) return '<div class="text-gray-600 text-xs">Empty</div>';
+        return items.map(item => {
+            if (item.type === 'directory') {
+                const childHtml = renderTree(item.children, depth + 1);
+                return `<div>
+                    <div class="tree-toggle text-gray-400 hover:text-gray-200 flex items-center gap-1" onclick="this.nextElementSibling.classList.toggle('hidden')">
+                        <span class="text-xs">&#9660;</span> <span class="text-yellow-500/70">${escapeHtml(item.name)}/</span>
+                    </div>
+                    <div class="tree-children">${childHtml}</div>
+                </div>`;
+            } else {
+                return `<div class="file-link text-blue-400/80 hover:text-blue-300 pl-4" onclick="openFile('${escapeHtml(item.path)}')">${escapeHtml(item.name)}</div>`;
+            }
+        }).join('');
+    }
+
+    async function openFile(path) {
+        try {
+            const res = await fetch(`/api/knowledge/${path}`);
+            const data = await res.json();
+            document.getElementById('modal-title').textContent = path;
+            document.getElementById('modal-content').textContent = data.content || 'Empty file';
+            document.getElementById('file-modal').classList.remove('hidden');
+        } catch (e) {
+            console.error(e);
+        }
+    }
+
+    function closeModal() {
+        document.getElementById('file-modal').classList.add('hidden');
+    }
+
+    // Close modal on background click
+    document.getElementById('file-modal').addEventListener('click', function(e) {
+        if (e.target === this) closeModal();
+    });
+
+    // ── Recent Posts ──
+    async function loadRecentPosts() {
+        try {
+            const res = await fetch('/api/posts');
+            const posts = await res.json();
+            const tbody = document.getElementById('posts-table');
+
+            if (!posts || posts.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="5" class="px-4 py-8 text-center text-gray-600">No posts yet</td></tr>';
+                return;
+            }
+
+            tbody.innerHTML = posts.slice(0, 50).map(p => {
+                const m = p.metadata || {};
+                const score = m.relevance_score || 0;
+                const scoreColor = score >= 70 ? 'text-green-400' : score >= 50 ? 'text-yellow-400' : 'text-gray-400';
+                const topics = (m.topics || []).join(', ');
+                const preview = (p.content_preview || '').substring(0, 100);
+                return `<tr class="hover:bg-gray-800/50">
+                    <td class="px-4 py-3 ${scoreColor} font-bold">${score}</td>
+                    <td class="px-4 py-3 text-gray-300">${escapeHtml(m.author_name || 'Unknown')}</td>
+                    <td class="px-4 py-3 text-gray-400 max-w-md truncate">${escapeHtml(preview)}</td>
+                    <td class="px-4 py-3 text-xs text-gray-500">${escapeHtml(topics)}</td>
+                    <td class="px-4 py-3 text-xs text-gray-600">${escapeHtml(m.crawl_source || '')}</td>
+                </tr>`;
+            }).join('');
+        } catch (e) {
+            console.error(e);
+        }
+    }
+
+    // ── Init ──
+    fetchStatus();
+    loadKnowledgeTree();
+    loadRecentPosts();
+
+    // Auto-refresh every 5 seconds
+    refreshInterval = setInterval(fetchStatus, 5000);
+    // Refresh posts and tree less frequently
+    setInterval(() => { loadRecentPosts(); loadKnowledgeTree(); }, 30000);
+    </script>
+</body>
+</html>
