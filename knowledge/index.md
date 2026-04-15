@@ -1,6 +1,6 @@
 ---
 title: LinkedIn AX Research Knowledge Base
-updated: '2026-04-15 19:59'
+updated: '2026-04-16 04:32'
 ---
 
 # LinkedIn AX Research Knowledge Base
@@ -11,14 +11,14 @@ updated: '2026-04-15 19:59'
 
 | 항목 | 수 |
 |------|---|
-| 원문 포스트 | 85 |
+| 원문 포스트 | 105 |
 | 원자 노트 (atoms) | 14 |
 | 인물 프로필 | 24 |
 | Seedling 🌱 | 7 |
 | Budding 🌿 | 6 |
 | Evergreen 🌳 | 1 |
 
-_Last updated: 2026-04-15 19:59_
+_Last updated: 2026-04-16 04:32_
 
 ## 구조
 
