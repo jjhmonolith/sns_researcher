@@ -1,6 +1,6 @@
 ---
 title: LinkedIn AX Research Knowledge Base
-updated: '2026-04-16 10:36'
+updated: '2026-04-16 11:16'
 ---
 
 # LinkedIn AX Research Knowledge Base
@@ -11,14 +11,14 @@ updated: '2026-04-16 10:36'
 
 | 항목 | 수 |
 |------|---|
-| 원문 포스트 | 125 |
-| 원자 노트 (atoms) | 14 |
-| 인물 프로필 | 31 |
-| Seedling 🌱 | 7 |
+| 원문 포스트 | 153 |
+| 원자 노트 (atoms) | 22 |
+| 인물 프로필 | 42 |
+| Seedling 🌱 | 15 |
 | Budding 🌿 | 6 |
 | Evergreen 🌳 | 1 |
 
-_Last updated: 2026-04-16 10:36_
+_Last updated: 2026-04-16 11:16_
 
 ## 구조
 
@@ -31,6 +31,14 @@ _Last updated: 2026-04-16 10:36_
 
 ## 원자 노트 목록
 
+- 🌱 **기업 워크플로우형 Claude 역량의 핵심이 연결·평가·배포 운영이라는 관점** `20260416-claude-enterprise-skills-connection-evaluation-dep`
+- 🌱 **AI 플랫폼 도입 실패의 원인이 기술보다 문제정의와 현업 도구 현실의 불일치라는 교훈** `20260416-ai-platform-failure-from-misaligned-problem-defini`
+- 🌱 **로그 SSOT와 표준화가 AI 활용 가능성을 높이는 데이터 운영 기반** `20260416-log-ssot-standardization-as-foundation-for-ai-usag`
+- 🌱 **실시간 협업 문서에서 인간과 AI 에이전트의 동시 편집을 가능하게 하는 sync engine 패턴** `20260416-sync-engine-pattern-for-human-and-ai-coediting`
+- 🌱 **AI 고객응대 에이전트의 가격 환각이 운영 리스크가 된 사례** `20260416-pricing-hallucination-risk-in-ai-customer-service-`
+- 🌱 **초소형 인력으로 운영되는 AI 네이티브 프런트엔드 기업 모델** `20260416-ai-native-frontend-company-with-minimal-headcount`
+- 🌱 **오프라인 비즈니스 환경 특화 AI 미팅 솔루션의 차별화 포인트** `20260416-offline-business-ai-meeting-solution-differentiati`
+- 🌱 **AI 개발의 확장성 경쟁력이 배포·최적화·인퍼런스 생태계에서 형성된다는 관점** `20260416-ai-scalability-through-deployment-optimization-inf`
 - 🌱 **역할·제약·도구 명세가 생성형 AI 결과 일관성을 높이는 구조** `20260415-role-constraint-tool-specification-for-consistent-`
 - 🌱 **반복적 규칙 기반 업무의 SKILL.md 시스템화 패턴** `20260415-skill-md-systemization-pattern-for-repetitive-rule`
 - 🌱 **에이전트 업무 매뉴얼은 장문 문서보다 핵심 지시 압축이 효과적이라는 관점** `20260415-agent-manual-concise-instructions-over-long-docs`
