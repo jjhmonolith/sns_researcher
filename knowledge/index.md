@@ -1,6 +1,6 @@
 ---
 title: LinkedIn AX Research Knowledge Base
-updated: '2026-04-16 12:54'
+updated: '2026-04-16 18:42'
 ---
 
 # LinkedIn AX Research Knowledge Base
@@ -11,14 +11,14 @@ updated: '2026-04-16 12:54'
 
 | 항목 | 수 |
 |------|---|
-| 원문 포스트 | 219 |
-| 원자 노트 (atoms) | 22 |
-| 인물 프로필 | 42 |
-| Seedling 🌱 | 15 |
+| 원문 포스트 | 246 |
+| 원자 노트 (atoms) | 27 |
+| 인물 프로필 | 46 |
+| Seedling 🌱 | 20 |
 | Budding 🌿 | 6 |
 | Evergreen 🌳 | 1 |
 
-_Last updated: 2026-04-16 12:54_
+_Last updated: 2026-04-16 18:42_
 
 ## 구조
 
@@ -31,6 +31,11 @@ _Last updated: 2026-04-16 12:54_
 
 ## 원자 노트 목록
 
+- 🌱 **AI 서사가 강한 제품일수록 데모 인기와 실사용 가치의 괴리를 경계해야 한다는 투자 관점** `20260416-ai-narrative-vs-actual-utility-gap-investment-lens`
+- 🌱 **AI 애플리케이션 검증에서 '손으로 해보는 테스트'가 문제 실재성을 가르는 기준** `20260416-manual-baseline-test-for-ai-application-problem-va`
+- 🌱 **생성형 AI 기업 성장 서사에서 실용화 매출과 모델 주권 프로젝트가 투자 신뢰를 강화하는 패턴** `20260416-genai-startup-funding-practical-revenue-and-sovere`
+- 🌱 **VC의 2026년 Agentic AI·Physical AI 대규모 투자 확대 신호** `20260416-vc-2026-agentic-ai-physical-ai-capital-allocation-`
+- 🌱 **비IT 중견·중소기업 AX 서비스 기획에서 현장 인터뷰를 선행하는 discovery 접근** `20260416-non-it-sme-ax-service-discovery-interview-approach`
 - 🌱 **기업 워크플로우형 Claude 역량의 핵심이 연결·평가·배포 운영이라는 관점** `20260416-claude-enterprise-skills-connection-evaluation-dep`
 - 🌱 **AI 플랫폼 도입 실패의 원인이 기술보다 문제정의와 현업 도구 현실의 불일치라는 교훈** `20260416-ai-platform-failure-from-misaligned-problem-defini`
 - 🌱 **로그 SSOT와 표준화가 AI 활용 가능성을 높이는 데이터 운영 기반** `20260416-log-ssot-standardization-as-foundation-for-ai-usag`

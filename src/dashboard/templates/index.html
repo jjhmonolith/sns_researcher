@@ -8,13 +8,7 @@
     <script>
         tailwind.config = {
             darkMode: 'class',
-            theme: {
-                extend: {
-                    colors: {
-                        brand: { 50:'#eff6ff', 100:'#dbeafe', 500:'#3b82f6', 600:'#2563eb', 700:'#1d4ed8' }
-                    }
-                }
-            }
+            theme: { extend: { colors: { brand: { 500:'#3b82f6', 600:'#2563eb' } } } }
         }
     </script>
     <style>
@@ -30,17 +24,29 @@
         .tree-children { padding-left: 1.25rem; }
         .file-link { cursor: pointer; }
         .file-link:hover { text-decoration: underline; }
+        .stat-session { font-size: 0.65rem; color: #6b7280; margin-top: 2px; }
     </style>
 </head>
 <body class="bg-gray-950 text-gray-200 min-h-screen">
+
     <!-- Header -->
     <header class="bg-gray-900 border-b border-gray-800 px-6 py-4">
         <div class="max-w-7xl mx-auto flex items-center justify-between">
             <div>
                 <h1 class="text-xl font-bold text-white">LinkedIn AX Research Agent</h1>
-                <p class="text-sm text-gray-400 mt-1">Enterprise AI Transformation</p>
+                <div class="flex items-center gap-3 mt-1">
+                    <p class="text-sm text-gray-400">Enterprise AI Transformation</p>
+                    <span id="uptime-badge" class="text-xs text-gray-500 font-mono"></span>
+                    <span id="cycle-badge" class="text-xs text-gray-500 font-mono"></span>
+                    <span id="pid-badge" class="text-xs text-gray-600 font-mono"></span>
+                </div>
             </div>
             <div class="flex items-center gap-3">
+                <!-- Heartbeat indicator -->
+                <div class="flex items-center gap-1.5">
+                    <div id="heartbeat-dot" class="w-2 h-2 rounded-full bg-gray-600"></div>
+                    <span id="heartbeat-text" class="text-xs text-gray-500"></span>
+                </div>
                 <span id="status-badge" class="px-3 py-1 rounded-full text-sm font-medium bg-gray-700 text-gray-300">
                     Loading...
                 </span>
@@ -57,43 +63,60 @@
     </header>
 
     <main class="max-w-7xl mx-auto px-6 py-6 space-y-6">
+
         <!-- Stats Cards -->
         <div class="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-7 gap-4">
             <div class="bg-gray-900 rounded-xl p-4 border border-gray-800">
                 <div class="text-xs text-gray-500 uppercase tracking-wide">Scanned</div>
                 <div id="stat-scanned" class="text-2xl font-bold text-white mt-1">0</div>
+                <div id="stat-scanned-session" class="stat-session"></div>
             </div>
             <div class="bg-gray-900 rounded-xl p-4 border border-gray-800">
                 <div class="text-xs text-gray-500 uppercase tracking-wide">Relevant</div>
                 <div id="stat-relevant" class="text-2xl font-bold text-green-400 mt-1">0</div>
+                <div id="stat-relevant-session" class="stat-session"></div>
             </div>
             <div class="bg-gray-900 rounded-xl p-4 border border-gray-800">
                 <div class="text-xs text-gray-500 uppercase tracking-wide">Rate</div>
                 <div id="stat-rate" class="text-2xl font-bold text-blue-400 mt-1">N/A</div>
+                <div class="stat-session">cumulative</div>
             </div>
             <div class="bg-gray-900 rounded-xl p-4 border border-gray-800">
                 <div class="text-xs text-gray-500 uppercase tracking-wide">Queue</div>
                 <div id="stat-queue" class="text-2xl font-bold text-orange-400 mt-1">0</div>
+                <div id="stat-queue-visited" class="stat-session"></div>
             </div>
             <div class="bg-gray-900 rounded-xl p-4 border border-gray-800">
                 <div class="text-xs text-gray-500 uppercase tracking-wide">Today</div>
                 <div id="stat-today" class="text-2xl font-bold text-purple-400 mt-1">0</div>
+                <div class="stat-session">posts saved</div>
             </div>
             <div class="bg-gray-900 rounded-xl p-4 border border-gray-800">
-                <div class="text-xs text-gray-500 uppercase tracking-wide">Atoms 🌱🌿🌳</div>
-                <div id="stat-atoms" class="text-2xl font-bold text-emerald-400 mt-1">0</div>
+                <div class="text-xs text-gray-500 uppercase tracking-wide">Atoms</div>
+                <div id="stat-atoms" class="text-lg font-bold text-emerald-400 mt-1">0</div>
+                <div class="stat-session">knowledge notes</div>
             </div>
             <div class="bg-gray-900 rounded-xl p-4 border border-gray-800">
                 <div class="text-xs text-gray-500 uppercase tracking-wide">Cost</div>
                 <div id="stat-cost" class="text-2xl font-bold text-yellow-400 mt-1">$0.00</div>
+                <div id="stat-cost-session" class="stat-session"></div>
             </div>
+        </div>
+
+        <!-- Session Info Bar -->
+        <div id="session-info-bar" class="bg-gray-900 rounded-xl px-4 py-2 border border-gray-800 text-xs text-gray-500 flex flex-wrap gap-4 hidden">
+            <span>First run: <span id="info-first-started" class="text-gray-400"></span></span>
+            <span>Sessions: <span id="info-sessions" class="text-gray-400"></span></span>
+            <span>Total cycles: <span id="info-cycles" class="text-gray-400"></span></span>
+            <span>Last synthesis: <span id="info-synthesis" class="text-gray-400"></span></span>
         </div>
 
         <!-- Current Action -->
         <div class="bg-gray-900 rounded-xl p-4 border border-gray-800">
             <div class="flex items-center gap-2">
-                <div id="action-indicator" class="w-2 h-2 rounded-full bg-green-500 pulse-dot"></div>
+                <div id="action-indicator" class="w-2 h-2 rounded-full bg-gray-600"></div>
                 <span class="text-xs text-gray-500 uppercase tracking-wide">Current Action</span>
+                <span id="error-badge" class="hidden ml-auto px-2 py-0.5 bg-red-900 text-red-300 text-xs rounded-full font-bold"></span>
             </div>
             <div id="current-action" class="text-sm text-gray-300 mt-2 font-mono">Waiting...</div>
             <div id="current-url" class="text-xs text-gray-600 mt-1 font-mono truncate"></div>
@@ -150,13 +173,13 @@
         <!-- Atom Notes Browser -->
         <div class="bg-gray-900 rounded-xl border border-gray-800">
             <div class="px-4 py-3 border-b border-gray-800 flex items-center justify-between">
-                <h2 class="text-sm font-semibold text-gray-300 uppercase tracking-wide">🧠 Atom Notes (Knowledge Base)</h2>
+                <h2 class="text-sm font-semibold text-gray-300 uppercase tracking-wide">Atom Notes (Knowledge Base)</h2>
                 <div class="flex gap-2">
                     <select id="atom-filter" onchange="loadAtoms()" class="text-xs bg-gray-800 border border-gray-700 text-gray-300 rounded px-2 py-1">
                         <option value="">All</option>
-                        <option value="seedling">🌱 Seedling</option>
-                        <option value="budding">🌿 Budding</option>
-                        <option value="evergreen">🌳 Evergreen</option>
+                        <option value="seedling">Seedling</option>
+                        <option value="budding">Budding</option>
+                        <option value="evergreen">Evergreen</option>
                     </select>
                     <button onclick="loadAtoms()" class="text-xs text-blue-400 hover:text-blue-300">Refresh</button>
                 </div>
@@ -165,11 +188,11 @@
                 <table class="w-full text-sm">
                     <thead>
                         <tr class="text-xs text-gray-500 uppercase border-b border-gray-800">
-                            <th class="px-4 py-2 text-left w-8">성숙도</th>
-                            <th class="px-4 py-2 text-left">개념</th>
-                            <th class="px-4 py-2 text-left w-20">링크</th>
-                            <th class="px-4 py-2 text-left w-20">출처</th>
-                            <th class="px-4 py-2 text-left w-24">갱신</th>
+                            <th class="px-4 py-2 text-left w-8">Maturity</th>
+                            <th class="px-4 py-2 text-left">Concept</th>
+                            <th class="px-4 py-2 text-left w-20">Links</th>
+                            <th class="px-4 py-2 text-left w-20">Sources</th>
+                            <th class="px-4 py-2 text-left w-24">Updated</th>
                         </tr>
                     </thead>
                     <tbody id="atoms-table" class="divide-y divide-gray-800">
@@ -179,9 +202,9 @@
             </div>
         </div>
 
-        <!-- Token Usage Details -->
+        <!-- Token Usage -->
         <div class="bg-gray-900 rounded-xl border border-gray-800 p-4">
-            <h2 class="text-sm font-semibold text-gray-300 uppercase tracking-wide mb-3">Token Usage</h2>
+            <h2 class="text-sm font-semibold text-gray-300 uppercase tracking-wide mb-3">Token Usage (Cumulative)</h2>
             <div class="grid grid-cols-2 md:grid-cols-4 gap-4 text-xs">
                 <div>
                     <span class="text-gray-500">Nano Input</span>
@@ -215,9 +238,34 @@
     </main>
 
     <script>
-    // ── Auto-refresh status ──
-    let refreshInterval = null;
+    let _lastHeartbeatAge = null;
 
+    // ── Helpers ──
+    function escapeHtml(text) {
+        const div = document.createElement('div');
+        div.textContent = text || '';
+        return div.innerHTML;
+    }
+
+    function formatUptime(seconds) {
+        if (!seconds || seconds <= 0) return '';
+        const h = Math.floor(seconds / 3600);
+        const m = Math.floor((seconds % 3600) / 60);
+        const s = seconds % 60;
+        if (h > 0) return `${h}h ${m}m`;
+        if (m > 0) return `${m}m ${s}s`;
+        return `${s}s`;
+    }
+
+    function formatAge(seconds) {
+        if (seconds === null || seconds === undefined) return '';
+        if (seconds < 10) return 'just now';
+        if (seconds < 60) return `${seconds}s ago`;
+        if (seconds < 3600) return `${Math.floor(seconds/60)}m ago`;
+        return `${Math.floor(seconds/3600)}h ago`;
+    }
+
+    // ── Status Fetch ──
     async function fetchStatus() {
         try {
             const res = await fetch('/api/status');
@@ -229,53 +277,103 @@
     }
 
     function updateDashboard(data) {
+        const st = data.status || 'not_started';
+
         // Status badge
         const badge = document.getElementById('status-badge');
         const statusColors = {
-            running: 'bg-green-600 text-green-100',
-            paused: 'bg-yellow-600 text-yellow-100',
-            synthesizing: 'bg-purple-600 text-purple-100',
+            running:       'bg-green-600 text-green-100',
+            paused:        'bg-yellow-600 text-yellow-100',
+            synthesizing:  'bg-purple-600 text-purple-100',
             waiting_login: 'bg-blue-600 text-blue-100',
-            initializing: 'bg-blue-600 text-blue-100',
-            error: 'bg-red-600 text-red-100',
-            stopped: 'bg-gray-600 text-gray-300',
-            not_started: 'bg-gray-700 text-gray-400',
+            initializing:  'bg-blue-600 text-blue-100',
+            error:         'bg-red-600 text-red-100',
+            stopped:       'bg-gray-600 text-gray-300',
+            stale:         'bg-orange-700 text-orange-200',
+            dead:          'bg-red-900 text-red-300',
+            not_started:   'bg-gray-700 text-gray-400',
         };
         const statusLabels = {
-            running: 'Running',
-            paused: 'Paused',
-            synthesizing: 'Synthesizing',
-            waiting_login: 'Waiting for Login',
-            initializing: 'Initializing',
-            error: 'Error',
-            stopped: 'Stopped',
-            not_started: 'Not Started',
+            running:       'Running',
+            paused:        'Paused',
+            synthesizing:  'Synthesizing',
+            waiting_login: 'Waiting Login',
+            initializing:  'Initializing',
+            error:         'Error',
+            stopped:       'Stopped',
+            stale:         'Stale',
+            dead:          'Dead',
+            not_started:   'Not Started',
         };
-        const st = data.status || 'not_started';
         badge.className = `px-3 py-1 rounded-full text-sm font-medium ${statusColors[st] || statusColors.not_started}`;
         badge.textContent = statusLabels[st] || st;
 
-        // Indicator
-        const indicator = document.getElementById('action-indicator');
-        indicator.className = st === 'running' ? 'w-2 h-2 rounded-full bg-green-500 pulse-dot' :
-                              st === 'paused' ? 'w-2 h-2 rounded-full bg-yellow-500' :
-                              'w-2 h-2 rounded-full bg-gray-600';
+        // Heartbeat
+        const hbAge = data.heartbeat_age_seconds ?? null;
+        _lastHeartbeatAge = hbAge;
+        const hbDot = document.getElementById('heartbeat-dot');
+        const hbText = document.getElementById('heartbeat-text');
+        if (hbAge !== null) {
+            const color = hbAge < 30 ? 'bg-green-500 pulse-dot' : hbAge < 90 ? 'bg-yellow-500' : 'bg-red-500';
+            hbDot.className = `w-2 h-2 rounded-full ${color}`;
+            hbText.textContent = `heartbeat ${formatAge(hbAge)}`;
+        } else if (st === 'running' || st === 'synthesizing') {
+            hbDot.className = 'w-2 h-2 rounded-full bg-green-500 pulse-dot';
+            hbText.textContent = 'live';
+        } else {
+            hbDot.className = 'w-2 h-2 rounded-full bg-gray-600';
+            hbText.textContent = '';
+        }
 
-        if (data.status === 'not_started') return;
+        // Action indicator
+        const indicator = document.getElementById('action-indicator');
+        indicator.className = (st === 'running' || st === 'synthesizing')
+            ? 'w-2 h-2 rounded-full bg-green-500 pulse-dot'
+            : st === 'paused' ? 'w-2 h-2 rounded-full bg-yellow-500'
+            : 'w-2 h-2 rounded-full bg-gray-600';
+
+        // Uptime / cycle / PID
+        document.getElementById('uptime-badge').textContent =
+            data.uptime_seconds ? `Uptime: ${formatUptime(data.uptime_seconds)}` : '';
+        document.getElementById('cycle-badge').textContent =
+            data.current_cycle ? `Cycle #${data.current_cycle}` : '';
+        document.getElementById('pid-badge').textContent =
+            data.pid ? `PID ${data.pid}` : '';
 
         // Stats
-        document.getElementById('stat-scanned').textContent = (data.total_posts_scanned || 0).toLocaleString();
-        document.getElementById('stat-relevant').textContent = (data.relevant_posts_found || 0).toLocaleString();
+        const scanned = data.total_posts_scanned || 0;
+        const relevant = data.relevant_posts_found || 0;
+        document.getElementById('stat-scanned').textContent = scanned.toLocaleString();
+        document.getElementById('stat-relevant').textContent = relevant.toLocaleString();
         document.getElementById('stat-rate').textContent = data.relevance_rate || 'N/A';
         document.getElementById('stat-queue').textContent = (data.queue_size || 0).toLocaleString();
         document.getElementById('stat-today').textContent = (data.posts_saved_today || 0).toLocaleString();
-        if (data.atom_count !== undefined) {
-            document.getElementById('stat-atoms').textContent = data.atom_count;
+
+        // Session sub-labels
+        const sesScanned = data.session_posts_scanned;
+        const sesRelevant = data.session_relevant_found;
+        document.getElementById('stat-scanned-session').textContent =
+            sesScanned !== undefined && sesScanned > 0 ? `this session: ${sesScanned}` : 'cumulative';
+        document.getElementById('stat-relevant-session').textContent =
+            sesRelevant !== undefined && sesRelevant > 0 ? `this session: ${sesRelevant}` : 'cumulative';
+
+        // Queue visited
+        const qs = data.queue_stats || {};
+        if (qs.visited_urls !== undefined) {
+            document.getElementById('stat-queue-visited').textContent = `visited: ${qs.visited_urls.toLocaleString()}`;
         }
 
         // Cost
         if (data.token_usage) {
             document.getElementById('stat-cost').textContent = data.token_usage.total_cost || '$0.00';
+            const sesCost = (
+                (data.token_usage.session_nano_input || 0) * 0.20 +
+                (data.token_usage.session_nano_output || 0) * 1.25 +
+                (data.token_usage.session_powerful_input || 0) * 2.50 +
+                (data.token_usage.session_powerful_output || 0) * 15.00
+            ) / 1_000_000;
+            document.getElementById('stat-cost-session').textContent =
+                sesCost > 0 ? `this session: $${sesCost.toFixed(4)}` : 'cumulative';
             document.getElementById('token-nano-in').textContent = (data.token_usage.nano_input || 0).toLocaleString();
             document.getElementById('token-nano-out').textContent = (data.token_usage.nano_output || 0).toLocaleString();
             document.getElementById('token-pow-in').textContent = (data.token_usage.powerful_input || 0).toLocaleString();
@@ -283,39 +381,46 @@
         }
 
         // Current action
-        document.getElementById('current-action').textContent = data.current_action || 'Idle';
+        document.getElementById('current-action').textContent = data.current_action || (st === 'not_started' ? 'Agent not started' : 'Idle');
         document.getElementById('current-url').textContent = data.current_url || '';
+
+        // Error badge
+        const errBadge = document.getElementById('error-badge');
+        const errCount = (data.recent_errors || []).length;
+        if (errCount > 0) {
+            errBadge.textContent = `${errCount} error${errCount > 1 ? 's' : ''}`;
+            errBadge.classList.remove('hidden');
+        } else {
+            errBadge.classList.add('hidden');
+        }
+
+        // Session info bar
+        const bar = document.getElementById('session-info-bar');
+        if (data.total_sessions || data.first_started_at) {
+            bar.classList.remove('hidden');
+            document.getElementById('info-first-started').textContent =
+                data.first_started_at ? new Date(data.first_started_at).toLocaleDateString('ko-KR') : '-';
+            document.getElementById('info-sessions').textContent = data.total_sessions || 0;
+            document.getElementById('info-synthesis').textContent = data.last_synthesis_at || 'Not yet';
+        }
 
         // Activity log
         if (data.activity_log && data.activity_log.length > 0) {
             const logDiv = document.getElementById('activity-log');
             logDiv.innerHTML = data.activity_log.slice().reverse().map(entry => {
-                const time = new Date(entry.timestamp).toLocaleTimeString();
-                return `<div class="log-${entry.level}"><span class="text-gray-600">${time}</span> [${entry.action}] ${escapeHtml(entry.detail)}</div>`;
+                const time = new Date(entry.timestamp).toLocaleTimeString('ko-KR');
+                return `<div class="log-${entry.level}"><span class="text-gray-600">${time}</span> [${escapeHtml(entry.action)}] ${escapeHtml(entry.detail)}</div>`;
             }).join('');
         }
     }
 
-    function escapeHtml(text) {
-        const div = document.createElement('div');
-        div.textContent = text;
-        return div.innerHTML;
-    }
-
     // ── Controls ──
     async function togglePause() {
-        try {
-            await fetch('/api/pause', { method: 'POST' });
-            fetchStatus();
-        } catch (e) { console.error(e); }
+        try { await fetch('/api/pause', { method: 'POST' }); fetchStatus(); } catch(e) {}
     }
-
     async function requestStop() {
-        if (!confirm('Are you sure you want to stop the agent?')) return;
-        try {
-            await fetch('/api/stop', { method: 'POST' });
-            fetchStatus();
-        } catch (e) { console.error(e); }
+        if (!confirm('Stop the agent?')) return;
+        try { await fetch('/api/stop', { method: 'POST' }); fetchStatus(); } catch(e) {}
     }
 
     // ── Knowledge Tree ──
@@ -323,23 +428,19 @@
         try {
             const res = await fetch('/api/knowledge');
             const tree = await res.json();
-            const container = document.getElementById('knowledge-tree');
-            container.innerHTML = renderTree(tree);
-        } catch (e) {
-            console.error('Knowledge tree error:', e);
-        }
+            document.getElementById('knowledge-tree').innerHTML = renderTree(tree);
+        } catch(e) { console.error(e); }
     }
 
     function renderTree(items, depth = 0) {
         if (!items || items.length === 0) return '<div class="text-gray-600 text-xs">Empty</div>';
         return items.map(item => {
             if (item.type === 'directory') {
-                const childHtml = renderTree(item.children, depth + 1);
                 return `<div>
                     <div class="tree-toggle text-gray-400 hover:text-gray-200 flex items-center gap-1" onclick="this.nextElementSibling.classList.toggle('hidden')">
                         <span class="text-xs">&#9660;</span> <span class="text-yellow-500/70">${escapeHtml(item.name)}/</span>
                     </div>
-                    <div class="tree-children">${childHtml}</div>
+                    <div class="tree-children">${renderTree(item.children, depth+1)}</div>
                 </div>`;
             } else {
                 return `<div class="file-link text-blue-400/80 hover:text-blue-300 pl-4" onclick="openFile('${escapeHtml(item.path)}')">${escapeHtml(item.name)}</div>`;
@@ -354,16 +455,10 @@
             document.getElementById('modal-title').textContent = path;
             document.getElementById('modal-content').textContent = data.content || 'Empty file';
             document.getElementById('file-modal').classList.remove('hidden');
-        } catch (e) {
-            console.error(e);
-        }
+        } catch(e) { console.error(e); }
     }
 
-    function closeModal() {
-        document.getElementById('file-modal').classList.add('hidden');
-    }
-
-    // Close modal on background click
+    function closeModal() { document.getElementById('file-modal').classList.add('hidden'); }
     document.getElementById('file-modal').addEventListener('click', function(e) {
         if (e.target === this) closeModal();
     });
@@ -374,12 +469,10 @@
             const res = await fetch('/api/posts');
             const posts = await res.json();
             const tbody = document.getElementById('posts-table');
-
             if (!posts || posts.length === 0) {
                 tbody.innerHTML = '<tr><td colspan="5" class="px-4 py-8 text-center text-gray-600">No posts yet</td></tr>';
                 return;
             }
-
             tbody.innerHTML = posts.slice(0, 50).map(p => {
                 const m = p.metadata || {};
                 const score = m.relevance_score || 0;
@@ -394,9 +487,7 @@
                     <td class="px-4 py-3 text-xs text-gray-600">${escapeHtml(m.crawl_source || '')}</td>
                 </tr>`;
             }).join('');
-        } catch (e) {
-            console.error(e);
-        }
+        } catch(e) { console.error(e); }
     }
 
     // ── Atoms ──
@@ -406,20 +497,24 @@
             const atoms = await res.json();
             const tbody = document.getElementById('atoms-table');
             const filter = document.getElementById('atom-filter').value;
-
             const filtered = filter ? atoms.filter(a => a.maturity === filter) : atoms;
 
-            // Update stat
             const counts = {seedling: 0, budding: 0, evergreen: 0};
             atoms.forEach(a => { if (counts[a.maturity] !== undefined) counts[a.maturity]++; });
             document.getElementById('stat-atoms').textContent =
-                `🌱${counts.seedling} 🌿${counts.budding} 🌳${counts.evergreen}`;
+                `${counts.seedling + counts.budding + counts.evergreen}`;
+            // Show breakdown in smaller text
+            document.querySelector('#stat-atoms').insertAdjacentHTML('afterend',
+                `<div class="stat-session" id="stat-atoms-breakdown">🌱${counts.seedling} 🌿${counts.budding} 🌳${counts.evergreen}</div>`
+            );
+            // Remove old breakdown if any duplicates
+            const breakdowns = document.querySelectorAll('#stat-atoms-breakdown');
+            if (breakdowns.length > 1) breakdowns[0].remove();
 
             if (!filtered.length) {
                 tbody.innerHTML = '<tr><td colspan="5" class="px-4 py-8 text-center text-gray-600">No atoms yet</td></tr>';
                 return;
             }
-
             const emoji = { seedling: '🌱', budding: '🌿', evergreen: '🌳' };
             tbody.innerHTML = filtered.slice(0, 80).map(a => {
                 return `<tr class="hover:bg-gray-800/50 cursor-pointer" onclick="openAtom('${escapeHtml(a.id)}')">
@@ -453,9 +548,7 @@
     loadRecentPosts();
     loadAtoms();
 
-    // Auto-refresh every 5 seconds
-    refreshInterval = setInterval(fetchStatus, 5000);
-    // Refresh posts and tree less frequently
+    setInterval(fetchStatus, 5000);
     setInterval(() => { loadRecentPosts(); loadKnowledgeTree(); loadAtoms(); }, 30000);
     </script>
 </body>

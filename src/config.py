@@ -14,6 +14,10 @@ ROOT_DIR = Path(__file__).parent.parent
 DATA_DIR = ROOT_DIR / "data"
 KNOWLEDGE_DIR = ROOT_DIR / "knowledge"
 COOKIES_PATH = DATA_DIR / "cookies.json"
+LOGS_DIR = ROOT_DIR / "logs"
+STATS_FILE = DATA_DIR / "stats.json"
+HEARTBEAT_FILE = DATA_DIR / "heartbeat.json"
+PID_FILE = LOGS_DIR / "agent.pid"
 
 
 class Settings(BaseSettings):
@@ -60,6 +64,7 @@ def ensure_dirs() -> None:
     """Ensure all required directories exist."""
     dirs = [
         DATA_DIR,
+        LOGS_DIR,
         KNOWLEDGE_DIR,
         KNOWLEDGE_DIR / "raw",
         KNOWLEDGE_DIR / "insights" / "topics",
