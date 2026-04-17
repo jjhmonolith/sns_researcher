@@ -11,7 +11,6 @@ from pydantic import BaseModel, Field
 
 class PostType(str, Enum):
     """Type of LinkedIn post."""
-
     ORIGINAL = "original"
     SHARED = "shared"
     ARTICLE = "article"
@@ -20,7 +19,6 @@ class PostType(str, Enum):
 
 class CrawlSource(str, Enum):
     """How the post was discovered."""
-
     HOME_FEED = "home_feed"
     SEARCH = "search"
     PROFILE = "profile"
@@ -30,7 +28,6 @@ class CrawlSource(str, Enum):
 
 class QueueItemType(str, Enum):
     """Type of item in the exploration queue."""
-
     POST_URL = "post_url"
     PROFILE_URL = "profile_url"
     SEARCH_KEYWORD = "search_keyword"
@@ -38,7 +35,6 @@ class QueueItemType(str, Enum):
 
 class QueueItemStatus(str, Enum):
     """Status of a queue item."""
-
     PENDING = "pending"
     IN_PROGRESS = "in_progress"
     COMPLETED = "completed"
@@ -48,7 +44,6 @@ class QueueItemStatus(str, Enum):
 
 class Author(BaseModel):
     """LinkedIn post author information."""
-
     name: str = ""
     headline: str = ""
     profile_url: str = ""
@@ -57,7 +52,6 @@ class Author(BaseModel):
 
 class LinkedInPost(BaseModel):
     """A single LinkedIn post with all extracted data."""
-
     post_id: str = ""
     url: str = ""
     author: Author = Field(default_factory=Author)
@@ -80,6 +74,11 @@ class LinkedInPost(BaseModel):
     should_follow_links: bool = False
     follow_targets: list[str] = Field(default_factory=list)
 
+    # Novelty analysis
+    novelty_score: int = 0
+    novelty_reason: str = ""
+    is_novel: bool = False
+
     # Metadata
     crawl_source: CrawlSource = CrawlSource.HOME_FEED
     crawled_at: str = Field(default_factory=lambda: datetime.now().isoformat())
@@ -88,7 +87,6 @@ class LinkedInPost(BaseModel):
 
 class QueueItem(BaseModel):
     """An item in the exploration queue."""
-
     url: str
     item_type: QueueItemType
     priority: int = 50  # 0-100, higher = more important
@@ -100,7 +98,6 @@ class QueueItem(BaseModel):
 
 class AgentStatus(str, Enum):
     """Current status of the agent."""
-
     INITIALIZING = "initializing"
     WAITING_LOGIN = "waiting_login"
     RUNNING = "running"
@@ -112,7 +109,6 @@ class AgentStatus(str, Enum):
 
 class AgentStats(BaseModel):
     """Runtime statistics for the agent."""
-
     status: AgentStatus = AgentStatus.INITIALIZING
     started_at: str = ""
     total_posts_scanned: int = 0
@@ -128,7 +124,6 @@ class AgentStats(BaseModel):
 
 class TokenUsage(BaseModel):
     """Track token usage and estimated costs."""
-
     nano_input_tokens: int = 0
     nano_output_tokens: int = 0
     powerful_input_tokens: int = 0
@@ -137,16 +132,12 @@ class TokenUsage(BaseModel):
     @property
     def nano_cost(self) -> float:
         """Estimated cost for GPT-5.4 nano usage."""
-        return (
-            self.nano_input_tokens * 0.20 + self.nano_output_tokens * 1.25
-        ) / 1_000_000
+        return (self.nano_input_tokens * 0.20 + self.nano_output_tokens * 1.25) / 1_000_000
 
     @property
     def powerful_cost(self) -> float:
         """Estimated cost for GPT-5.4 usage."""
-        return (
-            self.powerful_input_tokens * 2.50 + self.powerful_output_tokens * 15.00
-        ) / 1_000_000
+        return (self.powerful_input_tokens * 2.50 + self.powerful_output_tokens * 15.00) / 1_000_000
 
     @property
     def total_cost(self) -> float:
@@ -155,22 +146,7 @@ class TokenUsage(BaseModel):
 
 class ActivityLog(BaseModel):
     """A single activity log entry."""
-
     timestamp: str = Field(default_factory=lambda: datetime.now().isoformat())
     action: str = ""
     detail: str = ""
     level: str = "info"  # info, warning, error
-
-
-class PersistentStats(BaseModel):
-    """Cumulative stats persisted to disk across restarts."""
-
-    total_posts_scanned: int = 0
-    relevant_posts_found: int = 0
-    total_cycles: int = 0
-    first_started_at: str = ""
-    total_sessions: int = 0
-    nano_input_tokens: int = 0
-    nano_output_tokens: int = 0
-    powerful_input_tokens: int = 0
-    powerful_output_tokens: int = 0

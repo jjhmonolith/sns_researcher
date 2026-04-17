@@ -99,6 +99,41 @@ class Navigator:
         except Exception as e:
             logger.debug(f"Error expanding posts: {e}")
 
+    async def expand_comments(self, max_clicks: int = 2) -> None:
+        """Click to show/load comments on a post page."""
+        try:
+            # Click the comments button to open the comment section
+            comment_btn_selectors = [
+                "button[aria-label*='comment']",
+                "button[aria-label*='댓글']",
+            ]
+            for sel in comment_btn_selectors:
+                btn = await self.page.query_selector(sel)
+                if btn and await btn.is_visible():
+                    await btn.click()
+                    await asyncio.sleep(random.uniform(1.5, 3.0))
+                    break
+
+            # Click "show more comments" buttons
+            more_selectors = [
+                "button.comments-comments-list__load-more-comments-button",
+                "button[aria-label*='more comments']",
+                "button[aria-label*='이전 댓글']",
+            ]
+            for _ in range(max_clicks):
+                clicked = False
+                for sel in more_selectors:
+                    btn = await self.page.query_selector(sel)
+                    if btn and await btn.is_visible():
+                        await btn.click()
+                        await asyncio.sleep(random.uniform(1.0, 2.5))
+                        clicked = True
+                        break
+                if not clicked:
+                    break
+        except Exception as e:
+            logger.debug(f"Error expanding comments: {e}")
+
     async def search_posts(self, keyword: str, date_filter: str = "past-week") -> None:
         """Search LinkedIn for posts matching a keyword.
         

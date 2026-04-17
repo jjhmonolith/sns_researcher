@@ -52,6 +52,8 @@ class KnowledgeStore:
             "author_headline": post.author.headline,
             "author_profile": post.author.profile_url,
             "relevance_score": post.relevance_score,
+            "novelty_score": post.novelty_score,
+            "novelty_reason": post.novelty_reason,
             "topics": post.relevance_topics,
             "crawl_source": post.crawl_source.value,
             "published_date": post.published_date,
@@ -66,7 +68,9 @@ class KnowledgeStore:
             content_parts.append(f"**AI 요약**: {post.summary}\n")
         if post.published_date:
             content_parts.append(f"**게시일**: {post.published_date}\n")
-        content_parts.append(f"**관련성 점수**: {post.relevance_score}/100\n")
+        content_parts.append(f"**참신성 점수**: {post.novelty_score}/100\n")
+        if post.novelty_reason:
+            content_parts.append(f"**참신성 이유**: {post.novelty_reason}\n")
         content_parts.append(f"**토픽**: {', '.join(post.relevance_topics) if post.relevance_topics else 'N/A'}\n")
         content_parts.append("\n## 원문\n")
         content_parts.append(post.content)

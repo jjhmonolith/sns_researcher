@@ -15,6 +15,7 @@ from src.agent.weekly_synthesizer import WeeklySynthesizer
 from src.agent.monthly_synthesizer import MonthlySynthesizer
 from src.knowledge.store import KnowledgeStore
 from src.knowledge.queue import ExplorationQueue
+from src.knowledge.followed_authors import FollowedAuthors
 from src.knowledge.models import (
     AgentStats,
     AgentStatus,
@@ -37,8 +38,9 @@ class LinkedInCrawler:
         self.session = BrowserSession()
         self.store = KnowledgeStore()
         self.queue = ExplorationQueue()
+        self.followed_authors = FollowedAuthors()
         self.token_usage = TokenUsage()
-        self.relevance = RelevanceJudge(token_usage=self.token_usage)
+        self.relevance = RelevanceJudge(token_usage=self.token_usage, store=self.store)
         self.synthesizer = KnowledgeSynthesizer(store=self.store, token_usage=self.token_usage)
         self.weekly_synthesizer = WeeklySynthesizer(store=self.store, token_usage=self.token_usage)
         self.monthly_synthesizer = MonthlySynthesizer(store=self.store, token_usage=self.token_usage)
@@ -112,6 +114,9 @@ class LinkedInCrawler:
                     # Phase 1: Scan home feed (Korean personalized)
                     await self._scan_feed(navigator, extractor)
 
+                    # Phase 1.5: Re-visit followed authors
+                    await self._visit_followed_authors(navigator, extractor)
+
                     # Phase 2: Search with keywords (rotate Korean + English)
                     keyword_idx = (cycle - 1) % len(self.settings.keywords_list)
                     keyword = self.settings.keywords_list[keyword_idx]
@@ -153,6 +158,33 @@ class LinkedInCrawler:
             self.stats.status = AgentStatus.STOPPED
             await self.session.stop()
             self._log("info", "stopped", "Agent stopped.")
+
+    async def _visit_followed_authors(
+        self, navigator: Navigator, extractor: ContentExtractor
+    ) -> None:
+        """Re-visit 1-2 followed authors to check for new posts."""
+        authors_to_visit = self.followed_authors.pick_for_visit(count=2)
+        if not authors_to_visit:
+            return
+
+        for author_info in authors_to_visit:
+            if self._stop_requested:
+                break
+            url = author_info["profile_url"]
+            name = author_info.get("name", url[:40])
+            self.stats.current_action = f"Following: {name}"
+            self.stats.current_url = url
+            self._log("info", "follow_visit", f"Re-visiting followed author: {name}")
+
+            try:
+                await navigator.go_to_profile(url)
+                posts = await extractor.extract_profile_posts()
+                await self._process_posts(posts)
+                self.followed_authors.record_visit(url)
+            except Exception as e:
+                self._log("error", "follow_error", f"Failed to visit {name}: {e}")
+
+            await navigator.short_delay()
 
     async def _scan_feed(self, navigator: Navigator, extractor: ContentExtractor) -> None:
         """Scan the home feed for relevant posts."""
@@ -232,6 +264,12 @@ class LinkedInCrawler:
                     if post:
                         await self._process_posts([post])
 
+                        # Extract comment authors for relevant posts
+                        if post.is_relevant and post.comments_count > 0:
+                            await navigator.expand_comments(max_clicks=2)
+                            comment_authors = await extractor.extract_comment_authors()
+                            self._enqueue_comment_authors(comment_authors, post)
+
                 self.queue.mark_completed(item.url)
 
             except Exception as e:
@@ -267,7 +305,7 @@ class LinkedInCrawler:
                 self._log(
                     "info",
                     "relevant_post",
-                    f"[{post.relevance_score}] {post.author.name}: {post.summary[:60]}",
+                    f"[N:{post.novelty_score}] {post.author.name}: {post.summary[:60]}",
                 )
 
                 # Add follow targets to queue
@@ -280,6 +318,26 @@ class LinkedInCrawler:
                 # Still mark URL as visited to avoid re-processing
                 if post.url:
                     self.queue.mark_visited(post.url)
+
+    def _enqueue_comment_authors(
+        self, comment_authors: list[dict], source_post: LinkedInPost
+    ) -> None:
+        """Add comment authors to the exploration queue."""
+        added = 0
+        for author in comment_authors[:10]:
+            profile_url = author.get("profile_url", "")
+            if not profile_url:
+                continue
+            if self.queue.add_profile(
+                url=profile_url,
+                priority=max(source_post.relevance_score - 15, 25),
+                source_post_id=source_post.post_id,
+                reason=f"Commented on relevant post",
+            ):
+                added += 1
+            self.queue.record_mention(profile_url)
+        if added:
+            self._log("info", "comment_authors", f"Queued {added} comment authors from {source_post.post_id}")
 
     def _enqueue_follow_targets(self, post: LinkedInPost) -> None:
         """Add links and profiles from a relevant post to the exploration queue."""
@@ -299,6 +357,14 @@ class LinkedInCrawler:
                     source_post_id=post.post_id,
                     reason=f"Linked from relevant post (score={post.relevance_score})",
                 )
+
+        # Register author for periodic following
+        if post.author.profile_url:
+            self.followed_authors.add(
+                profile_url=post.author.profile_url,
+                name=post.author.name,
+                headline=post.author.headline,
+            )
 
         # Author profile (high priority for highly relevant posts)
         if post.author.profile_url and post.relevance_score >= self.settings.relevance_threshold:

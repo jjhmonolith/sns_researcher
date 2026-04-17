@@ -254,6 +254,88 @@ class ContentExtractor:
         logger.info(f"Extracted {len(posts)} posts from search results.")
         return posts
 
+    async def extract_comment_authors(self) -> list[dict]:
+        """Extract comment author profiles from the current page.
+
+        Returns list of dicts: [{profile_url, name, comment_text}]
+        """
+        results = []
+        seen_urls: set[str] = set()
+
+        comment_selectors = [
+            "article.comments-comment-entity",
+            "div.comments-comment-item",
+            "article.comments-comment-item",
+            "div.comments-comment-entity",
+        ]
+
+        elements = []
+        for selector in comment_selectors:
+            elements = await self.page.query_selector_all(selector)
+            if elements:
+                break
+
+        for element in elements[:20]:
+            try:
+                author_info: dict[str, str] = {}
+
+                # Profile URL
+                link_selectors = [
+                    "a[data-tracking-control-name*='comment'][href*='/in/']",
+                    "a.comments-post-meta__name-text[href*='/in/']",
+                    "a.comments-post-meta__profile-link[href*='/in/']",
+                    "a[href*='/in/']",
+                ]
+                for sel in link_selectors:
+                    link_el = await element.query_selector(sel)
+                    if link_el:
+                        href = await link_el.get_attribute("href")
+                        if href and "/in/" in href:
+                            normalized = href.split("?")[0].rstrip("/")
+                            if normalized not in seen_urls:
+                                seen_urls.add(normalized)
+                                author_info["profile_url"] = normalized
+                            break
+
+                if not author_info.get("profile_url"):
+                    continue
+
+                # Name
+                name_selectors = [
+                    "span.comments-post-meta__name-text",
+                    "span.hoverable-link-text span",
+                    "a[href*='/in/'] span.t-bold span[aria-hidden='true']",
+                    "a[href*='/in/'] span",
+                ]
+                for sel in name_selectors:
+                    name_el = await element.query_selector(sel)
+                    if name_el:
+                        name = _clean_text(await name_el.inner_text())
+                        if name:
+                            author_info["name"] = name
+                            break
+
+                # Comment text (optional)
+                text_selectors = [
+                    "span.comments-comment-item__main-content",
+                    "span[dir='ltr']",
+                ]
+                for sel in text_selectors:
+                    text_el = await element.query_selector(sel)
+                    if text_el:
+                        text = _clean_text(await text_el.inner_text())
+                        if text and len(text) > 5:
+                            author_info["comment_text"] = text[:500]
+                            break
+
+                results.append(author_info)
+            except Exception as e:
+                logger.debug(f"Failed to extract comment author: {e}")
+                continue
+
+        logger.info(f"Extracted {len(results)} comment authors.")
+        return results
+
     async def _extract_single_post(
         self, element: ElementHandle, source: CrawlSource
     ) -> LinkedInPost | None:
