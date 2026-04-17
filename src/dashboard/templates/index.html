@@ -185,6 +185,9 @@
     let _postsExpanded = false;
 
     // ── Markdown renderer ──
+    // Configure marked to preserve line breaks (like LinkedIn originals)
+    marked.setOptions({ breaks: true, gfm: true });
+
     function renderMd(text) {
         if (!text) return '';
         try {
@@ -337,21 +340,22 @@
         const hasMore = _postsData.length > showCount;
         container.innerHTML = _postsData.slice(0, showCount).map((p, i) => {
             const m = p.metadata || {};
-            const score = m.relevance_score || 0;
-            const scoreClass = score >= 70 ? 'bg-green-500/20 text-green-400' :
-                               score >= 50 ? 'bg-yellow-500/20 text-yellow-400' :
-                               'bg-gray-700 text-gray-400';
             const author = getAuthorDisplay(m);
             const date = getDateDisplay(m);
             const preview = extractPreview(p.content_preview);
             const topics = (m.topics || []).slice(0, 3);
+            const reactions = m.reactions || 0;
+            const comments = m.comments || 0;
             return `<div class="bg-gray-900 rounded-xl border border-gray-800 p-4 cursor-pointer hover:border-gray-600 hover:bg-gray-900/80 transition group" onclick="openPost(${i})">
                 <div class="flex items-start justify-between gap-2 mb-2">
                     <div class="min-w-0">
                         <div class="text-sm font-medium text-gray-200 truncate">${esc(author)}</div>
                         ${date ? `<div class="text-xs text-gray-500 mt-0.5">${esc(date)}</div>` : ''}
                     </div>
-                    <span class="px-2 py-0.5 rounded-full text-xs font-bold shrink-0 ${scoreClass}">${score}</span>
+                    <div class="flex items-center gap-2 text-xs text-gray-500 shrink-0">
+                        ${reactions ? `<span>👍 ${reactions.toLocaleString()}</span>` : ''}
+                        ${comments ? `<span>💬 ${comments}</span>` : ''}
+                    </div>
                 </div>
                 <p class="text-sm text-gray-400 line-clamp-3 mb-3 leading-relaxed">${esc(preview.substring(0, 200))}</p>
                 ${topics.length ? `<div class="flex flex-wrap gap-1">${topics.map(t => `<span class="px-2 py-0.5 rounded-full text-xs bg-gray-800 text-gray-500">${esc(t)}</span>`).join('')}</div>` : ''}
