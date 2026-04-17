@@ -48,17 +48,20 @@ def _parse_relative_date(text: str) -> str:
     """
     if not text:
         return ""
-    text = text.strip()
+    # Clean common LinkedIn suffixes like "1일 •", "2h •", "1일 • 수정됨"
+    text = text.strip().split("•")[0].strip().split("·")[0].strip()
+    if not text:
+        return ""
     now = datetime.now()
 
     patterns: list[tuple[str, str]] = [
-        # Korean
-        (r"(\d+)\s*분\s*전", "minutes"),
-        (r"(\d+)\s*시간\s*전", "hours"),
-        (r"(\d+)\s*일\s*전", "days"),
-        (r"(\d+)\s*주\s*전", "weeks"),
-        (r"(\d+)\s*개월\s*전", "months"),
-        (r"(\d+)\s*년\s*전", "years"),
+        # Korean (with and without "전")
+        (r"(\d+)\s*분\s*전?", "minutes"),
+        (r"(\d+)\s*시간\s*전?", "hours"),
+        (r"(\d+)\s*일\s*전?", "days"),
+        (r"(\d+)\s*주\s*전?", "weeks"),
+        (r"(\d+)\s*개월\s*전?", "months"),
+        (r"(\d+)\s*년\s*전?", "years"),
         # English abbreviated
         (r"(\d+)\s*min", "minutes"),
         (r"(\d+)\s*h\b", "hours"),
@@ -304,8 +307,10 @@ class ContentExtractor:
         """Extract author information from a post element."""
         author = Author()
         try:
-            # Author name
+            # Author name (2026-04 LinkedIn DOM)
             name_selectors = [
+                "a.update-components-actor__meta-link span.t-bold span[aria-hidden='true']",
+                "span.t-bold span[aria-hidden='true']",
                 "span.feed-shared-actor__name span[aria-hidden='true']",
                 "span.feed-shared-actor__name",
                 "a.feed-shared-actor__container span.t-bold span",
@@ -318,11 +323,12 @@ class ContentExtractor:
                     if author.name:
                         break
 
-            # Author headline
+            # Author headline (2026-04 LinkedIn DOM)
             headline_selectors = [
+                "span.update-components-actor__description span[aria-hidden='true']",
+                "span.update-components-actor__description",
                 "span.feed-shared-actor__description span[aria-hidden='true']",
                 "span.feed-shared-actor__sub-description",
-                "span.update-components-actor__description",
             ]
             for sel in headline_selectors:
                 hl_el = await element.query_selector(sel)
@@ -331,8 +337,9 @@ class ContentExtractor:
                     if author.headline:
                         break
 
-            # Author profile URL
+            # Author profile URL (2026-04 LinkedIn DOM)
             link_selectors = [
+                "a.update-components-actor__meta-link[href*='/in/']",
                 "a.feed-shared-actor__container",
                 "a.update-components-actor__container",
                 "a.app-aware-link[href*='/in/']",
@@ -423,10 +430,10 @@ class ContentExtractor:
 
             # 2. Try timestamp link text (relative dates like "2h", "3일 전")
             date_selectors = [
+                "span.update-components-actor__sub-description span[aria-hidden='true']",
                 "a.feed-shared-actor__sub-description-link span",
                 "a.feed-shared-actor__sub-description-link",
                 "span.feed-shared-actor__sub-description span[aria-hidden='true']",
-                "span.update-components-actor__sub-description span[aria-hidden='true']",
             ]
             for sel in date_selectors:
                 el = await element.query_selector(sel)
@@ -510,7 +517,9 @@ class ContentExtractor:
         """Parse a count string like '1,234' or '1.2K' into an integer."""
         if not text:
             return 0
-        text = text.strip().replace(",", "").replace(" ", "")
+        # Take only the first line — LinkedIn often appends "손해성님 외 11명" etc.
+        text = text.strip().split("\n")[0].strip()
+        text = text.replace(",", "").replace(" ", "")
         text = re.sub(r"[^0-9.kKmM만천]", "", text)
 
         if not text:

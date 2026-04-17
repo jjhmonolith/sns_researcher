@@ -1,6 +1,6 @@
 ---
 title: LinkedIn AX Research Knowledge Base
-updated: '2026-04-17 10:49'
+updated: '2026-04-17 11:02'
 ---
 
 # LinkedIn AX Research Knowledge Base
@@ -11,14 +11,14 @@ updated: '2026-04-17 10:49'
 
 | 항목 | 수 |
 |------|---|
-| 원문 포스트 | 9 |
-| 원자 노트 (atoms) | 27 |
-| 인물 프로필 | 67 |
-| Seedling 🌱 | 20 |
+| 원문 포스트 | 5 |
+| 원자 노트 (atoms) | 34 |
+| 인물 프로필 | 72 |
+| Seedling 🌱 | 27 |
 | Budding 🌿 | 6 |
 | Evergreen 🌳 | 1 |
 
-_Last updated: 2026-04-17 10:49_
+_Last updated: 2026-04-17 11:02_
 
 ## 구조
 
@@ -31,6 +31,13 @@ _Last updated: 2026-04-17 10:49_
 
 ## 원자 노트 목록
 
+- 🌱 **비정형 대화 데이터를 에이전트 참조 가능한 맥락으로 전환하는 AX 인프라 관점** `20260417-turning-unstructured-conversations-into-agent-read`
+- 🌱 **AI 에이전트 성능을 좌우하는 발화정보의 선제적 디지털화** `20260417-proactive-digitization-of-spoken-context-for-ai-ag`
+- 🌱 **Build-on-Demand 시대의 오픈소스 스킬 조합형 서비스 제작 관점** `20260417-build-on-demand-open-source-skill-composition-serv`
+- 🌱 **한국 생활형 서비스 연동 스킬이 에이전트 실용성을 좌우하는 로컬라이제이션 층** `20260417-korean-local-service-skills-as-agent-localization-`
+- 🌱 **법령정보 MCP를 통한 인사·노무 검색의 대화형 워크플로우 전환** `20260417-legal-information-mcp-conversational-workflow-for-`
+- 🌱 **한국 법령 Git 버전관리의 개정 이력 탐색성 향상** `20260417-korean-law-git-versioning-amendment-history-discov`
+- 🌱 **교육 AX에서 교사·기업·연구자 펠로우십의 삼각 피드백 루프** `20260417-education-ax-teacher-company-researcher-feedback-l`
 - 🌱 **AI 서사가 강한 제품일수록 데모 인기와 실사용 가치의 괴리를 경계해야 한다는 투자 관점** `20260416-ai-narrative-vs-actual-utility-gap-investment-lens`
 - 🌱 **AI 애플리케이션 검증에서 '손으로 해보는 테스트'가 문제 실재성을 가르는 기준** `20260416-manual-baseline-test-for-ai-application-problem-va`
 - 🌱 **생성형 AI 기업 성장 서사에서 실용화 매출과 모델 주권 프로젝트가 투자 신뢰를 강화하는 패턴** `20260416-genai-startup-funding-practical-revenue-and-sovere`
