@@ -30,6 +30,7 @@
             -webkit-box-orient: vertical;
             overflow: hidden;
         }
+        #people-strip::-webkit-scrollbar { display: none; }
         #activity-log::-webkit-scrollbar { width: 5px; }
         #activity-log::-webkit-scrollbar-thumb { background: #374151; border-radius: 3px; }
         .cost-tooltip { display: none; }
@@ -121,6 +122,16 @@
             <div id="action-indicator" class="w-2 h-2 rounded-full bg-green-500 pulse-dot shrink-0"></div>
             <span id="current-action" class="text-xs text-gray-400 font-mono">Waiting...</span>
             <span id="current-url" class="text-xs text-gray-600 font-mono truncate ml-auto max-w-md"></span>
+        </div>
+
+        <!-- Key People -->
+        <div>
+            <div class="flex items-center justify-between mb-3">
+                <h2 class="text-sm font-semibold text-gray-300 uppercase tracking-wide">Key People</h2>
+            </div>
+            <div id="people-strip" class="flex gap-3 overflow-x-auto pb-2" style="-webkit-overflow-scrolling:touch; scrollbar-width:none;">
+                <div class="text-gray-600 text-sm py-4">Loading...</div>
+            </div>
         </div>
 
         <!-- Recent Posts Gallery -->
@@ -536,14 +547,75 @@
     }
     document.addEventListener('keydown', e => { if (e.key === 'Escape') closeModal(); });
 
+    // ── People Strip ──
+    let _peopleData = [];
+
+    async function loadPeople() {
+        try {
+            const res = await fetch('/api/people');
+            _peopleData = await res.json();
+            renderPeople();
+        } catch(e) { console.error(e); }
+    }
+
+    function renderPeople() {
+        const container = document.getElementById('people-strip');
+        if (!_peopleData || !_peopleData.length) {
+            container.innerHTML = '<div class="text-gray-600 text-sm py-4">No profiles yet</div>';
+            return;
+        }
+        container.innerHTML = _peopleData.slice(0, 20).map((p, i) => {
+            const initials = (p.name || '?').split(/\s+/).map(w => w[0]).join('').substring(0, 2).toUpperCase();
+            const bgColors = ['bg-blue-600', 'bg-purple-600', 'bg-emerald-600', 'bg-orange-600', 'bg-pink-600', 'bg-cyan-600'];
+            const bg = bgColors[i % bgColors.length];
+            const headline = (p.headline || '').substring(0, 40);
+            return `<div class="shrink-0 w-36 bg-gray-900 rounded-xl border border-gray-800 p-3 cursor-pointer hover:border-gray-600 transition text-center" onclick="openPerson(${i})">
+                <div class="w-10 h-10 ${bg} rounded-full flex items-center justify-center text-white text-sm font-bold mx-auto mb-2">${esc(initials)}</div>
+                <div class="text-xs font-medium text-gray-200 truncate">${esc(p.name)}</div>
+                <div class="text-xs text-gray-500 truncate mt-0.5">${esc(headline)}</div>
+                ${p.is_followed ? `<div class="text-xs text-blue-400 mt-1">Following · ${p.relevant_post_count} posts</div>` : ''}
+            </div>`;
+        }).join('');
+    }
+
+    async function openPerson(index) {
+        const p = _peopleData[index];
+        if (!p) return;
+
+        let fullContent = p.content_preview || '';
+        if (p.path) {
+            try {
+                const res = await fetch(`/api/knowledge/${p.path}`);
+                const data = await res.json();
+                if (data.content) {
+                    fullContent = data.content.replace(/^---[\s\S]*?---\n*/m, '').trim();
+                }
+            } catch(e) {}
+        }
+
+        document.getElementById('modal-title').textContent = p.name;
+        document.getElementById('modal-body').innerHTML = `
+            <div class="flex items-center gap-3 text-xs text-gray-500 flex-wrap">
+                ${p.headline ? `<span>${esc(p.headline)}</span>` : ''}
+                ${p.is_followed ? '<span class="text-blue-400">Following</span>' : ''}
+                ${p.relevant_post_count ? `<span>${p.relevant_post_count} relevant posts</span>` : ''}
+                ${p.visit_count ? `<span>${p.visit_count} visits</span>` : ''}
+                ${p.profile_url ? `<a href="${esc(p.profile_url)}" target="_blank" class="text-blue-400 hover:underline ml-auto">LinkedIn ↗</a>` : ''}
+            </div>
+            <div class="md-content text-sm leading-relaxed bg-gray-800/30 rounded-lg p-4 mt-2">${renderMd(fullContent)}</div>
+        `;
+        openModal();
+    }
+
     // ── Init ──
     fetchStatus();
+    loadPeople();
     loadRecentPosts();
     loadAtoms();
     loadDigests();
 
     setInterval(fetchStatus, 5000);
-    setInterval(() => { loadRecentPosts(); loadAtoms(); }, 30000);
+    setInterval(() => { loadRecentPosts(); loadAtoms(); loadPeople(); }, 30000);
     </script>
 </body>
 </html>

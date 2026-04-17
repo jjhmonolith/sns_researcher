@@ -77,18 +77,54 @@
       "name": "소근주",
       "headline": "--",
       "first_seen": "2026-04-17T14:32:49.199295",
-      "last_visited": "",
-      "visit_count": 0,
-      "relevant_post_count": 1
+      "last_visited": "2026-04-17T14:52:03.741254",
+      "visit_count": 1,
+      "relevant_post_count": 4
     },
     {
       "profile_url": "https://www.linkedin.com/in/jaeha-lee",
       "name": "Jaeha Lee",
       "headline": "Co-founder & CTO at Lattice",
       "first_seen": "2026-04-17T14:42:36.632462",
-      "last_visited": "",
-      "visit_count": 0,
+      "last_visited": "2026-04-17T14:52:25.137773",
+      "visit_count": 1,
       "relevant_post_count": 1
+    },
+    {
+      "profile_url": "https://www.linkedin.com/in/seungpil",
+      "name": "Seungpil Lee",
+      "headline": "Founder at 사용성연구소",
+      "first_seen": "2026-04-17T15:00:28.073245",
+      "last_visited": "2026-04-17T15:01:12.297555",
+      "visit_count": 1,
+      "relevant_post_count": 3
+    },
+    {
+      "profile_url": "https://www.linkedin.com/in/zoon-chang",
+      "name": "Zoon Chang",
+      "headline": "Venture Capitalist | Strong belief in an outlier-led future",
+      "first_seen": "2026-04-17T15:00:35.844725",
+      "last_visited": "2026-04-17T15:01:36.377338",
+      "visit_count": 1,
+      "relevant_post_count": 4
+    },
+    {
+      "profile_url": "https://www.linkedin.com/in/sojeong-%EC%A0%84%EC%86%8C%EC%A0%95-jeon",
+      "name": "전소정 JeonSojeong",
+      "headline": "UXUI designer",
+      "first_seen": "2026-04-17T16:10:25.081728",
+      "last_visited": "2026-04-17T16:11:26.749621",
+      "visit_count": 1,
+      "relevant_post_count": 2
+    },
+    {
+      "profile_url": "https://www.linkedin.com/in/leekh929",
+      "name": "Kyunghun Lee",
+      "headline": "CAIO & Deputy CEO @ Channel Corp | AI × B2B SaaS",
+      "first_seen": "2026-04-17T16:10:35.587658",
+      "last_visited": "2026-04-17T16:11:52.442729",
+      "visit_count": 1,
+      "relevant_post_count": 5
     }
   ]
 }
