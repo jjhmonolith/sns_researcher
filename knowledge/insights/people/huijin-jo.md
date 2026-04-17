@@ -3,7 +3,7 @@ created_at: '2026-04-17T11:01:39.083927'
 headline: HR & ER을 데이터와 AI로 연결하는 노무사 | Decision Intelligence
 name: 조희진 Huijin Jo
 profile_url: https://www.linkedin.com/feed/update/urn:li:activity:7449432292705624065/
-updated_at: '2026-04-17T14:28:18.125747'
+updated_at: '2026-04-17T14:47:02.085013'
 ---
 
 # 조희진 Huijin Jo
@@ -45,3 +45,25 @@ HR/ER와 법률 정보 검색을 AI로 연결하는 관점을 제시해, 기업 
 
 ## 주목할 포스트
 - Legalize KR와 korean-law-mcp를 소개하며, 법령 검색과 개정 이력 추적을 AI 친화적으로 바꾸는 방향을 설명한 포스트.
+
+---
+
+### 업데이트 2026-04-17
+
+# 조희진 Huijin Jo
+
+**소속/직함**: 노무사 | HR & ER Decision Intelligence
+**LinkedIn**: https://www.linkedin.com/feed/update/urn:li:activity:7448432429608112128/
+**업데이트**: 2026-04-17
+
+
+## AX 관련성
+인사·노무 분야 업무 프로세스에 MCP·오픈소스 법령 데이터를 결합한 실용적 AX 사례를 제시하는 HR 도메인 전문가.
+
+## 주요 관점
+- 법령·판례의 Git 버전관리(Legalize KR)와 MCP 연동(korean-law-mcp)이 인사·노무 담당자의 수동 검색 시간을 대폭 줄일 수 있다고 본다.
+- AI로 법에 대한 접근 장벽이 낮아지고 있으며, 비전문가의 시각이 오히려 혁신적 도구를 만들어낸다고 본다.
+- 인사·노무 업무에서 관계법령·행정해석·판정서를 AI 어시스턴트 안에서 자연어로 검색하는 환경이 실현 가능하다고 본다.
+
+## 주목할 포스트
+- Legalize KR(법령 Git 버전화)과 korean-law-mcp(법령·판례 MCP 연동)를 소개하며 인사·노무 업무에서의 AI 검색 활용 가능성을 제시한 포스트.

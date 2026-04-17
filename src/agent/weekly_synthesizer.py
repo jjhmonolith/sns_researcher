@@ -5,9 +5,8 @@ from __future__ import annotations
 import logging
 from datetime import datetime
 
-from openai import AsyncOpenAI
-
 from src.config import get_settings
+from src.agent.llm import call_claude
 from src.knowledge.models import TokenUsage
 from src.knowledge.store import KnowledgeStore
 from src.knowledge.git_sync import GitSync
@@ -66,9 +65,6 @@ class WeeklySynthesizer:
     """Produces weekly knowledge maps from accumulated atoms."""
 
     def __init__(self, store: KnowledgeStore, token_usage: TokenUsage | None = None) -> None:
-        settings = get_settings()
-        self.client = AsyncOpenAI(api_key=settings.openai_api_key)
-        self.model = settings.model_powerful
         self.store = store
         self.token_usage = token_usage or TokenUsage()
         self.git = GitSync()
@@ -206,17 +202,4 @@ class WeeklySynthesizer:
         return applied
 
     async def _call_llm(self, prompt: str, max_tokens: int = 4000) -> str:
-        try:
-            response = await self.client.chat.completions.create(
-                model=self.model,
-                messages=[{"role": "user", "content": prompt}],
-                temperature=0.3,
-                max_completion_tokens=max_tokens,
-            )
-            if response.usage:
-                self.token_usage.powerful_input_tokens += response.usage.prompt_tokens
-                self.token_usage.powerful_output_tokens += response.usage.completion_tokens
-            return response.choices[0].message.content or ""
-        except Exception as e:
-            logger.error(f"LLM call failed: {e}")
-            return ""
+        return await call_claude(prompt)

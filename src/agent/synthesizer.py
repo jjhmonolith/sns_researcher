@@ -7,9 +7,8 @@ import logging
 import re
 from datetime import datetime
 
-from openai import AsyncOpenAI
-
 from src.config import get_settings
+from src.agent.llm import call_claude
 from src.knowledge.models import LinkedInPost, TokenUsage
 from src.knowledge.store import KnowledgeStore
 from src.knowledge.git_sync import GitSync
@@ -109,9 +108,6 @@ class KnowledgeSynthesizer:
     """Synthesizes collected posts into atomic knowledge notes."""
 
     def __init__(self, store: KnowledgeStore, token_usage: TokenUsage | None = None) -> None:
-        settings = get_settings()
-        self.client = AsyncOpenAI(api_key=settings.openai_api_key)
-        self.model = settings.model_powerful
         self.store = store
         self.token_usage = token_usage or TokenUsage()
         self.git = GitSync()
@@ -294,7 +290,7 @@ class KnowledgeSynthesizer:
             return ""
         path = self.store.save_digest(
             content=response,
-            metadata={"post_count": len(posts), "model": self.model},
+            metadata={"post_count": len(posts), "model": "claude-code-cli"},
         )
         return str(path)
 
@@ -322,23 +318,7 @@ class KnowledgeSynthesizer:
             logger.warning(f"Embedding link error: {e}")
 
     async def _call_llm(self, prompt: str, max_tokens: int = 4000) -> str:
-        try:
-            response = await self.client.chat.completions.create(
-                model=self.model,
-                messages=[
-                    {"role": "system", "content": SYSTEM_PROMPT},
-                    {"role": "user", "content": prompt},
-                ],
-                temperature=0.2,
-                max_completion_tokens=max_tokens,
-            )
-            if response.usage:
-                self.token_usage.powerful_input_tokens += response.usage.prompt_tokens
-                self.token_usage.powerful_output_tokens += response.usage.completion_tokens
-            return response.choices[0].message.content or ""
-        except Exception as e:
-            logger.error(f"LLM call failed: {e}")
-            return ""
+        return await call_claude(prompt, system_prompt=SYSTEM_PROMPT)
 
     def _format_posts(self, posts: list[LinkedInPost]) -> str:
         parts = []
