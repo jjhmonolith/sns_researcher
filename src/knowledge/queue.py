@@ -20,6 +20,7 @@ class ExplorationQueue:
     def __init__(self) -> None:
         self._items: list[QueueItem] = []
         self._visited_urls: set[str] = set()
+        self._mention_counts: dict[str, int] = {}
         self._load()
 
     def _load(self) -> None:
@@ -29,6 +30,7 @@ class ExplorationQueue:
                 data = json.loads(QUEUE_FILE.read_text())
                 self._items = [QueueItem(**item) for item in data.get("items", [])]
                 self._visited_urls = set(data.get("visited_urls", []))
+                self._mention_counts = data.get("mention_counts", {})
                 logger.info(
                     f"Loaded queue: {len(self.pending_items)} pending, "
                     f"{len(self._visited_urls)} visited"
@@ -37,9 +39,11 @@ class ExplorationQueue:
                 logger.error(f"Error loading queue: {e}")
                 self._items = []
                 self._visited_urls = set()
+                self._mention_counts = {}
         else:
             self._items = []
             self._visited_urls = set()
+            self._mention_counts = {}
 
     def _save(self) -> None:
         """Persist queue state to disk."""
@@ -47,6 +51,7 @@ class ExplorationQueue:
         data = {
             "items": [item.model_dump() for item in self._items[-1000:]],  # Keep last 1000
             "visited_urls": list(self._visited_urls)[-5000:],  # Keep last 5000
+            "mention_counts": dict(list(self._mention_counts.items())[-2000:]),
         }
         QUEUE_FILE.write_text(json.dumps(data, indent=2, ensure_ascii=False))
 
@@ -143,6 +148,21 @@ class ExplorationQueue:
         """Check if a URL has already been visited."""
         normalized = url.split("?")[0].rstrip("/")
         return normalized in self._visited_urls
+
+    def record_mention(self, url: str, boost_per_mention: int = 5) -> None:
+        """Record that a URL was mentioned in a relevant post. Boost priority if queued."""
+        normalized = url.split("?")[0].rstrip("/")
+        self._mention_counts[normalized] = self._mention_counts.get(normalized, 0) + 1
+        count = self._mention_counts[normalized]
+
+        if count > 1:
+            for item in self._items:
+                existing_normalized = item.url.split("?")[0].rstrip("/")
+                if existing_normalized == normalized and item.status == QueueItemStatus.PENDING:
+                    item.priority = min(item.priority + boost_per_mention, 100)
+                    logger.debug(f"Boosted priority for {url[:60]} (mentions={count}, priority={item.priority})")
+                    break
+            self._save()
 
     def add_profile(self, url: str, priority: int = 50, source_post_id: str = "", reason: str = "") -> bool:
         """Shortcut to add a profile URL."""

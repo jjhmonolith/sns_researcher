@@ -5,6 +5,7 @@ from __future__ import annotations
 import hashlib
 import logging
 import re
+from datetime import datetime, timedelta
 from urllib.parse import urlparse, urljoin
 
 from playwright.async_api import Page, ElementHandle
@@ -36,6 +37,70 @@ def _clean_text(text: str) -> str:
     lines = [re.sub(r"[ \t]+", " ", line).strip() for line in lines]
     text = "\n".join(line for line in lines if line)
     return text.strip()
+
+
+def _parse_relative_date(text: str) -> str:
+    """Parse a relative date string (Korean/English) into YYYY-MM-DD.
+
+    Handles formats like '2h', '3d', '1w', '2mo',
+    '1시간 전', '3일 전', '2주 전', '1개월 전', etc.
+    Returns empty string if unparseable.
+    """
+    if not text:
+        return ""
+    text = text.strip()
+    now = datetime.now()
+
+    patterns: list[tuple[str, str]] = [
+        # Korean
+        (r"(\d+)\s*분\s*전", "minutes"),
+        (r"(\d+)\s*시간\s*전", "hours"),
+        (r"(\d+)\s*일\s*전", "days"),
+        (r"(\d+)\s*주\s*전", "weeks"),
+        (r"(\d+)\s*개월\s*전", "months"),
+        (r"(\d+)\s*년\s*전", "years"),
+        # English abbreviated
+        (r"(\d+)\s*min", "minutes"),
+        (r"(\d+)\s*h\b", "hours"),
+        (r"(\d+)\s*d\b", "days"),
+        (r"(\d+)\s*w\b", "weeks"),
+        (r"(\d+)\s*mo", "months"),
+        (r"(\d+)\s*y\b", "years"),
+        # English verbose
+        (r"(\d+)\s*minute", "minutes"),
+        (r"(\d+)\s*hour", "hours"),
+        (r"(\d+)\s*day", "days"),
+        (r"(\d+)\s*week", "weeks"),
+        (r"(\d+)\s*month", "months"),
+        (r"(\d+)\s*year", "years"),
+    ]
+
+    for pattern, unit in patterns:
+        m = re.search(pattern, text, re.IGNORECASE)
+        if m:
+            n = int(m.group(1))
+            if unit == "minutes":
+                dt = now - timedelta(minutes=n)
+            elif unit == "hours":
+                dt = now - timedelta(hours=n)
+            elif unit == "days":
+                dt = now - timedelta(days=n)
+            elif unit == "weeks":
+                dt = now - timedelta(weeks=n)
+            elif unit == "months":
+                dt = now - timedelta(days=n * 30)
+            elif unit == "years":
+                dt = now - timedelta(days=n * 365)
+            else:
+                continue
+            return dt.strftime("%Y-%m-%d")
+
+    # Try ISO-like date (e.g. "2026-04-15" or "Apr 15, 2026")
+    iso_match = re.search(r"\d{4}-\d{2}-\d{2}", text)
+    if iso_match:
+        return iso_match.group(0)
+
+    return ""
 
 
 def _extract_linkedin_urls(text: str) -> tuple[list[str], list[str], list[str]]:
@@ -204,6 +269,9 @@ class ContentExtractor:
         # Extract engagement metrics
         reactions, comments, reposts = await self._extract_metrics(element)
 
+        # Extract published date
+        published_date = await self._extract_published_date(element)
+
         # Extract links from content
         full_text = content + " " + (await self._extract_all_hrefs(element))
         profile_urls, post_urls, external_urls = _extract_linkedin_urls(full_text)
@@ -222,6 +290,7 @@ class ContentExtractor:
             author=author,
             content=_clean_text(content),
             post_type=post_type,
+            published_date=published_date,
             reactions_count=reactions,
             comments_count=comments,
             reposts_count=reposts,
@@ -337,6 +406,40 @@ class ContentExtractor:
                     return f"https://www.linkedin.com/feed/update/urn:li:activity:{match.group(1)}/"
         except Exception:
             pass
+        return ""
+
+    async def _extract_published_date(self, element: ElementHandle) -> str:
+        """Extract the published date of a post element."""
+        try:
+            # 1. Try <time datetime="..."> attribute (most precise)
+            time_el = await element.query_selector("time[datetime]")
+            if time_el:
+                dt_attr = await time_el.get_attribute("datetime")
+                if dt_attr:
+                    # LinkedIn sometimes uses ISO format like "2026-04-15T10:30:00.000Z"
+                    iso_match = re.search(r"\d{4}-\d{2}-\d{2}", dt_attr)
+                    if iso_match:
+                        return iso_match.group(0)
+
+            # 2. Try timestamp link text (relative dates like "2h", "3일 전")
+            date_selectors = [
+                "a.feed-shared-actor__sub-description-link span",
+                "a.feed-shared-actor__sub-description-link",
+                "span.feed-shared-actor__sub-description span[aria-hidden='true']",
+                "span.update-components-actor__sub-description span[aria-hidden='true']",
+            ]
+            for sel in date_selectors:
+                el = await element.query_selector(sel)
+                if el:
+                    text = await el.inner_text()
+                    text = _clean_text(text)
+                    if text:
+                        parsed = _parse_relative_date(text)
+                        if parsed:
+                            return parsed
+        except Exception as e:
+            logger.debug(f"Error extracting published date: {e}")
+
         return ""
 
     async def _extract_metrics(self, element: ElementHandle) -> tuple[int, int, int]:

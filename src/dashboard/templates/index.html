@@ -5,10 +5,17 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>LinkedIn AX Research Agent</title>
     <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
     <script>
         tailwind.config = {
             darkMode: 'class',
-            theme: { extend: { colors: { brand: { 500:'#3b82f6', 600:'#2563eb' } } } }
+            theme: {
+                extend: {
+                    colors: {
+                        brand: { 50:'#eff6ff', 100:'#dbeafe', 500:'#3b82f6', 600:'#2563eb', 700:'#1d4ed8' }
+                    }
+                }
+            }
         }
     </script>
     <style>
@@ -17,36 +24,43 @@
         .log-info { color: #93c5fd; }
         .log-warning { color: #fbbf24; }
         .log-error { color: #f87171; }
-        #activity-log { max-height: 400px; overflow-y: auto; }
-        #activity-log::-webkit-scrollbar { width: 6px; }
+        .line-clamp-3 {
+            display: -webkit-box;
+            -webkit-line-clamp: 3;
+            -webkit-box-orient: vertical;
+            overflow: hidden;
+        }
+        #activity-log::-webkit-scrollbar { width: 5px; }
         #activity-log::-webkit-scrollbar-thumb { background: #374151; border-radius: 3px; }
-        .tree-toggle { cursor: pointer; user-select: none; }
-        .tree-children { padding-left: 1.25rem; }
-        .file-link { cursor: pointer; }
-        .file-link:hover { text-decoration: underline; }
-        .stat-session { font-size: 0.65rem; color: #6b7280; margin-top: 2px; }
+        .cost-tooltip { display: none; }
+        .cost-card:hover .cost-tooltip { display: block; }
+        /* Fix: prevent background scroll when modal is open */
+        body.modal-open { overflow: hidden; }
+        /* Markdown styles inside modal */
+        .md-content h1 { font-size: 1.25rem; font-weight: 700; margin: 0.75rem 0 0.5rem; color: #e5e7eb; }
+        .md-content h2 { font-size: 1.1rem; font-weight: 600; margin: 0.75rem 0 0.4rem; color: #d1d5db; }
+        .md-content h3 { font-size: 1rem; font-weight: 600; margin: 0.5rem 0 0.3rem; color: #d1d5db; }
+        .md-content p { margin: 0.4rem 0; line-height: 1.7; }
+        .md-content ul, .md-content ol { padding-left: 1.25rem; margin: 0.3rem 0; }
+        .md-content li { margin: 0.15rem 0; }
+        .md-content strong { color: #e5e7eb; }
+        .md-content a { color: #60a5fa; text-decoration: underline; }
+        .md-content code { background: rgba(55,65,81,0.5); padding: 0.1rem 0.3rem; border-radius: 0.25rem; font-size: 0.85em; }
+        .md-content pre { background: rgba(17,24,39,0.6); padding: 0.75rem; border-radius: 0.5rem; overflow-x: auto; margin: 0.5rem 0; }
+        .md-content pre code { background: none; padding: 0; }
+        .md-content blockquote { border-left: 3px solid #4b5563; padding-left: 0.75rem; color: #9ca3af; margin: 0.5rem 0; }
+        .md-content hr { border-color: #374151; margin: 0.75rem 0; }
     </style>
 </head>
 <body class="bg-gray-950 text-gray-200 min-h-screen">
-
     <!-- Header -->
     <header class="bg-gray-900 border-b border-gray-800 px-6 py-4">
         <div class="max-w-7xl mx-auto flex items-center justify-between">
             <div>
                 <h1 class="text-xl font-bold text-white">LinkedIn AX Research Agent</h1>
-                <div class="flex items-center gap-3 mt-1">
-                    <p class="text-sm text-gray-400">Enterprise AI Transformation</p>
-                    <span id="uptime-badge" class="text-xs text-gray-500 font-mono"></span>
-                    <span id="cycle-badge" class="text-xs text-gray-500 font-mono"></span>
-                    <span id="pid-badge" class="text-xs text-gray-600 font-mono"></span>
-                </div>
+                <p class="text-sm text-gray-400 mt-0.5">Enterprise AI Transformation</p>
             </div>
             <div class="flex items-center gap-3">
-                <!-- Heartbeat indicator -->
-                <div class="flex items-center gap-1.5">
-                    <div id="heartbeat-dot" class="w-2 h-2 rounded-full bg-gray-600"></div>
-                    <span id="heartbeat-text" class="text-xs text-gray-500"></span>
-                </div>
                 <span id="status-badge" class="px-3 py-1 rounded-full text-sm font-medium bg-gray-700 text-gray-300">
                     Loading...
                 </span>
@@ -62,470 +76,389 @@
         </div>
     </header>
 
-    <main class="max-w-7xl mx-auto px-6 py-6 space-y-6">
-
+    <main class="max-w-7xl mx-auto px-6 py-6 space-y-5">
         <!-- Stats Cards -->
-        <div class="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-7 gap-4">
+        <div class="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-7 gap-3">
             <div class="bg-gray-900 rounded-xl p-4 border border-gray-800">
                 <div class="text-xs text-gray-500 uppercase tracking-wide">Scanned</div>
                 <div id="stat-scanned" class="text-2xl font-bold text-white mt-1">0</div>
-                <div id="stat-scanned-session" class="stat-session"></div>
             </div>
             <div class="bg-gray-900 rounded-xl p-4 border border-gray-800">
                 <div class="text-xs text-gray-500 uppercase tracking-wide">Relevant</div>
                 <div id="stat-relevant" class="text-2xl font-bold text-green-400 mt-1">0</div>
-                <div id="stat-relevant-session" class="stat-session"></div>
             </div>
             <div class="bg-gray-900 rounded-xl p-4 border border-gray-800">
                 <div class="text-xs text-gray-500 uppercase tracking-wide">Rate</div>
                 <div id="stat-rate" class="text-2xl font-bold text-blue-400 mt-1">N/A</div>
-                <div class="stat-session">cumulative</div>
             </div>
             <div class="bg-gray-900 rounded-xl p-4 border border-gray-800">
                 <div class="text-xs text-gray-500 uppercase tracking-wide">Queue</div>
                 <div id="stat-queue" class="text-2xl font-bold text-orange-400 mt-1">0</div>
-                <div id="stat-queue-visited" class="stat-session"></div>
             </div>
             <div class="bg-gray-900 rounded-xl p-4 border border-gray-800">
                 <div class="text-xs text-gray-500 uppercase tracking-wide">Today</div>
                 <div id="stat-today" class="text-2xl font-bold text-purple-400 mt-1">0</div>
-                <div class="stat-session">posts saved</div>
             </div>
             <div class="bg-gray-900 rounded-xl p-4 border border-gray-800">
                 <div class="text-xs text-gray-500 uppercase tracking-wide">Atoms</div>
                 <div id="stat-atoms" class="text-lg font-bold text-emerald-400 mt-1">0</div>
-                <div class="stat-session">knowledge notes</div>
             </div>
-            <div class="bg-gray-900 rounded-xl p-4 border border-gray-800">
+            <div class="bg-gray-900 rounded-xl p-4 border border-gray-800 cost-card relative">
                 <div class="text-xs text-gray-500 uppercase tracking-wide">Cost</div>
                 <div id="stat-cost" class="text-2xl font-bold text-yellow-400 mt-1">$0.00</div>
-                <div id="stat-cost-session" class="stat-session"></div>
-            </div>
-        </div>
-
-        <!-- Session Info Bar -->
-        <div id="session-info-bar" class="bg-gray-900 rounded-xl px-4 py-2 border border-gray-800 text-xs text-gray-500 flex flex-wrap gap-4 hidden">
-            <span>First run: <span id="info-first-started" class="text-gray-400"></span></span>
-            <span>Sessions: <span id="info-sessions" class="text-gray-400"></span></span>
-            <span>Total cycles: <span id="info-cycles" class="text-gray-400"></span></span>
-            <span>Last synthesis: <span id="info-synthesis" class="text-gray-400"></span></span>
-        </div>
-
-        <!-- Current Action -->
-        <div class="bg-gray-900 rounded-xl p-4 border border-gray-800">
-            <div class="flex items-center gap-2">
-                <div id="action-indicator" class="w-2 h-2 rounded-full bg-gray-600"></div>
-                <span class="text-xs text-gray-500 uppercase tracking-wide">Current Action</span>
-                <span id="error-badge" class="hidden ml-auto px-2 py-0.5 bg-red-900 text-red-300 text-xs rounded-full font-bold"></span>
-            </div>
-            <div id="current-action" class="text-sm text-gray-300 mt-2 font-mono">Waiting...</div>
-            <div id="current-url" class="text-xs text-gray-600 mt-1 font-mono truncate"></div>
-        </div>
-
-        <!-- Two Column Layout -->
-        <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            <!-- Activity Log -->
-            <div class="bg-gray-900 rounded-xl border border-gray-800">
-                <div class="px-4 py-3 border-b border-gray-800">
-                    <h2 class="text-sm font-semibold text-gray-300 uppercase tracking-wide">Activity Log</h2>
-                </div>
-                <div id="activity-log" class="p-4 space-y-1 font-mono text-xs">
-                    <div class="text-gray-600">Waiting for agent to start...</div>
-                </div>
-            </div>
-
-            <!-- Knowledge Base Browser -->
-            <div class="bg-gray-900 rounded-xl border border-gray-800">
-                <div class="px-4 py-3 border-b border-gray-800 flex items-center justify-between">
-                    <h2 class="text-sm font-semibold text-gray-300 uppercase tracking-wide">Knowledge Base</h2>
-                    <button onclick="loadKnowledgeTree()" class="text-xs text-blue-400 hover:text-blue-300">Refresh</button>
-                </div>
-                <div id="knowledge-tree" class="p-4 text-sm space-y-1">
-                    <div class="text-gray-600">Loading...</div>
+                <div class="cost-tooltip absolute top-full left-0 mt-1 bg-gray-800 border border-gray-700 rounded-lg p-3 text-xs z-10 w-48 shadow-xl">
+                    <div class="flex justify-between mb-1"><span class="text-gray-400">Nano</span><span id="tt-nano-cost" class="text-gray-200">$0.00</span></div>
+                    <div class="flex justify-between mb-1"><span class="text-gray-400">GPT-5.4</span><span id="tt-pow-cost" class="text-gray-200">$0.00</span></div>
+                    <hr class="border-gray-700 my-1">
+                    <div class="flex justify-between"><span class="text-gray-400">Nano In/Out</span><span id="tt-nano-tokens" class="text-gray-300">0/0</span></div>
+                    <div class="flex justify-between"><span class="text-gray-400">GPT In/Out</span><span id="tt-pow-tokens" class="text-gray-300">0/0</span></div>
                 </div>
             </div>
         </div>
 
-        <!-- Recent Posts Table -->
-        <div class="bg-gray-900 rounded-xl border border-gray-800">
-            <div class="px-4 py-3 border-b border-gray-800 flex items-center justify-between">
-                <h2 class="text-sm font-semibold text-gray-300 uppercase tracking-wide">Recent Relevant Posts</h2>
+        <!-- Compact Action Bar -->
+        <div class="flex items-center gap-2 px-4 py-2 bg-gray-900/50 rounded-lg border border-gray-800/50">
+            <div id="action-indicator" class="w-2 h-2 rounded-full bg-green-500 pulse-dot shrink-0"></div>
+            <span id="current-action" class="text-xs text-gray-400 font-mono">Waiting...</span>
+            <span id="current-url" class="text-xs text-gray-600 font-mono truncate ml-auto max-w-md"></span>
+        </div>
+
+        <!-- Recent Posts Gallery -->
+        <div>
+            <div class="flex items-center justify-between mb-3">
+                <h2 class="text-sm font-semibold text-gray-300 uppercase tracking-wide">Recent Posts</h2>
                 <button onclick="loadRecentPosts()" class="text-xs text-blue-400 hover:text-blue-300">Refresh</button>
             </div>
-            <div class="overflow-x-auto">
-                <table class="w-full text-sm">
-                    <thead>
-                        <tr class="text-xs text-gray-500 uppercase border-b border-gray-800">
-                            <th class="px-4 py-3 text-left">Score</th>
-                            <th class="px-4 py-3 text-left">Author</th>
-                            <th class="px-4 py-3 text-left">Summary</th>
-                            <th class="px-4 py-3 text-left">Topics</th>
-                            <th class="px-4 py-3 text-left">Source</th>
-                        </tr>
-                    </thead>
-                    <tbody id="posts-table" class="divide-y divide-gray-800">
-                        <tr><td colspan="5" class="px-4 py-8 text-center text-gray-600">No posts yet</td></tr>
-                    </tbody>
-                </table>
+            <div id="posts-gallery" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                <div class="col-span-full text-center text-gray-600 text-sm py-8">No posts yet</div>
             </div>
         </div>
 
-        <!-- Atom Notes Browser -->
-        <div class="bg-gray-900 rounded-xl border border-gray-800">
-            <div class="px-4 py-3 border-b border-gray-800 flex items-center justify-between">
-                <h2 class="text-sm font-semibold text-gray-300 uppercase tracking-wide">Atom Notes (Knowledge Base)</h2>
-                <div class="flex gap-2">
-                    <select id="atom-filter" onchange="loadAtoms()" class="text-xs bg-gray-800 border border-gray-700 text-gray-300 rounded px-2 py-1">
-                        <option value="">All</option>
-                        <option value="seedling">Seedling</option>
-                        <option value="budding">Budding</option>
-                        <option value="evergreen">Evergreen</option>
-                    </select>
-                    <button onclick="loadAtoms()" class="text-xs text-blue-400 hover:text-blue-300">Refresh</button>
+        <!-- Knowledge Base Gallery -->
+        <div>
+            <div class="flex items-center justify-between mb-3">
+                <h2 class="text-sm font-semibold text-gray-300 uppercase tracking-wide">Knowledge Base</h2>
+                <div class="flex gap-1">
+                    <button onclick="filterAtoms('')" data-filter="" class="atom-btn px-3 py-1 text-xs rounded-full bg-gray-800 text-gray-300 hover:bg-gray-700 transition">All</button>
+                    <button onclick="filterAtoms('seedling')" data-filter="seedling" class="atom-btn px-3 py-1 text-xs rounded-full bg-gray-800 text-gray-400 hover:bg-gray-700 transition">🌱 Seedling</button>
+                    <button onclick="filterAtoms('budding')" data-filter="budding" class="atom-btn px-3 py-1 text-xs rounded-full bg-gray-800 text-gray-400 hover:bg-gray-700 transition">🌿 Budding</button>
+                    <button onclick="filterAtoms('evergreen')" data-filter="evergreen" class="atom-btn px-3 py-1 text-xs rounded-full bg-gray-800 text-gray-400 hover:bg-gray-700 transition">🌳 Evergreen</button>
                 </div>
             </div>
-            <div class="overflow-x-auto">
-                <table class="w-full text-sm">
-                    <thead>
-                        <tr class="text-xs text-gray-500 uppercase border-b border-gray-800">
-                            <th class="px-4 py-2 text-left w-8">Maturity</th>
-                            <th class="px-4 py-2 text-left">Concept</th>
-                            <th class="px-4 py-2 text-left w-20">Links</th>
-                            <th class="px-4 py-2 text-left w-20">Sources</th>
-                            <th class="px-4 py-2 text-left w-24">Updated</th>
-                        </tr>
-                    </thead>
-                    <tbody id="atoms-table" class="divide-y divide-gray-800">
-                        <tr><td colspan="5" class="px-4 py-8 text-center text-gray-600">Loading atoms...</td></tr>
-                    </tbody>
-                </table>
+            <div id="atoms-gallery" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+                <div class="col-span-full text-center text-gray-600 text-sm py-8">Loading atoms...</div>
             </div>
         </div>
 
-        <!-- Token Usage -->
-        <div class="bg-gray-900 rounded-xl border border-gray-800 p-4">
-            <h2 class="text-sm font-semibold text-gray-300 uppercase tracking-wide mb-3">Token Usage (Cumulative)</h2>
-            <div class="grid grid-cols-2 md:grid-cols-4 gap-4 text-xs">
-                <div>
-                    <span class="text-gray-500">Nano Input</span>
-                    <div id="token-nano-in" class="text-gray-300 font-mono">0</div>
-                </div>
-                <div>
-                    <span class="text-gray-500">Nano Output</span>
-                    <div id="token-nano-out" class="text-gray-300 font-mono">0</div>
-                </div>
-                <div>
-                    <span class="text-gray-500">GPT-5.4 Input</span>
-                    <div id="token-pow-in" class="text-gray-300 font-mono">0</div>
-                </div>
-                <div>
-                    <span class="text-gray-500">GPT-5.4 Output</span>
-                    <div id="token-pow-out" class="text-gray-300 font-mono">0</div>
-                </div>
-            </div>
+        <!-- Recent Digests -->
+        <div id="digests-section" class="hidden">
+            <h2 class="text-sm font-semibold text-gray-300 uppercase tracking-wide mb-3">Recent Digests</h2>
+            <div id="digests-list" class="grid grid-cols-1 md:grid-cols-2 gap-3"></div>
         </div>
 
-        <!-- File Viewer Modal -->
-        <div id="file-modal" class="hidden fixed inset-0 bg-black/70 z-50 flex items-center justify-center p-4">
-            <div class="bg-gray-900 rounded-xl border border-gray-700 w-full max-w-3xl max-h-[80vh] flex flex-col">
-                <div class="px-4 py-3 border-b border-gray-700 flex items-center justify-between">
-                    <h3 id="modal-title" class="text-sm font-semibold text-gray-300 truncate"></h3>
-                    <button onclick="closeModal()" class="text-gray-500 hover:text-gray-300 text-xl">&times;</button>
+        <!-- Activity Log (collapsible) -->
+        <details class="bg-gray-900 rounded-xl border border-gray-800">
+            <summary class="px-4 py-3 cursor-pointer text-sm font-semibold text-gray-400 uppercase tracking-wide hover:text-gray-200 transition">
+                Activity Log <span id="log-count" class="text-gray-600 font-normal text-xs">(0)</span>
+            </summary>
+            <div id="activity-log" class="p-4 space-y-0.5 font-mono text-xs max-h-64 overflow-y-auto">
+                <div class="text-gray-600">Waiting for agent to start...</div>
+            </div>
+        </details>
+
+        <!-- Modal -->
+        <div id="modal" class="hidden fixed inset-0 bg-black/70 z-50 flex items-center justify-center p-4" onclick="if(event.target===this)closeModal()">
+            <div class="bg-gray-900 rounded-xl border border-gray-700 w-full max-w-3xl max-h-[85vh] flex flex-col" onclick="event.stopPropagation()">
+                <div class="px-5 py-3 border-b border-gray-700 flex items-center justify-between shrink-0">
+                    <h3 id="modal-title" class="text-sm font-semibold text-gray-200 truncate pr-4"></h3>
+                    <button onclick="closeModal()" class="text-gray-500 hover:text-gray-300 text-xl leading-none">&times;</button>
                 </div>
-                <div id="modal-content" class="p-4 overflow-y-auto text-sm font-mono whitespace-pre-wrap text-gray-300"></div>
+                <div id="modal-body" class="p-5 overflow-y-auto text-sm text-gray-300 space-y-3"></div>
             </div>
         </div>
     </main>
 
     <script>
-    let _lastHeartbeatAge = null;
+    let _postsData = [];
+    let _atomsData = [];
+    let _atomFilter = '';
+    let _postsExpanded = false;
 
-    // ── Helpers ──
-    function escapeHtml(text) {
-        const div = document.createElement('div');
-        div.textContent = text || '';
-        return div.innerHTML;
+    // ── Markdown renderer ──
+    function renderMd(text) {
+        if (!text) return '';
+        try {
+            return marked.parse(text);
+        } catch(e) {
+            return esc(text).replace(/\n/g, '<br>');
+        }
     }
 
-    function formatUptime(seconds) {
-        if (!seconds || seconds <= 0) return '';
-        const h = Math.floor(seconds / 3600);
-        const m = Math.floor((seconds % 3600) / 60);
-        const s = seconds % 60;
-        if (h > 0) return `${h}h ${m}m`;
-        if (m > 0) return `${m}m ${s}s`;
-        return `${s}s`;
-    }
-
-    function formatAge(seconds) {
-        if (seconds === null || seconds === undefined) return '';
-        if (seconds < 10) return 'just now';
-        if (seconds < 60) return `${seconds}s ago`;
-        if (seconds < 3600) return `${Math.floor(seconds/60)}m ago`;
-        return `${Math.floor(seconds/3600)}h ago`;
-    }
-
-    // ── Status Fetch ──
+    // ── Status polling ──
     async function fetchStatus() {
         try {
             const res = await fetch('/api/status');
             const data = await res.json();
             updateDashboard(data);
-        } catch (e) {
-            console.error('Status fetch error:', e);
-        }
+        } catch (e) { console.error('Status fetch error:', e); }
     }
 
     function updateDashboard(data) {
-        const st = data.status || 'not_started';
-
-        // Status badge
         const badge = document.getElementById('status-badge');
         const statusColors = {
-            running:       'bg-green-600 text-green-100',
-            paused:        'bg-yellow-600 text-yellow-100',
-            synthesizing:  'bg-purple-600 text-purple-100',
+            running: 'bg-green-600 text-green-100',
+            paused: 'bg-yellow-600 text-yellow-100',
+            synthesizing: 'bg-purple-600 text-purple-100',
             waiting_login: 'bg-blue-600 text-blue-100',
-            initializing:  'bg-blue-600 text-blue-100',
-            error:         'bg-red-600 text-red-100',
-            stopped:       'bg-gray-600 text-gray-300',
-            stale:         'bg-orange-700 text-orange-200',
-            dead:          'bg-red-900 text-red-300',
-            not_started:   'bg-gray-700 text-gray-400',
+            initializing: 'bg-blue-600 text-blue-100',
+            error: 'bg-red-600 text-red-100',
+            stopped: 'bg-gray-600 text-gray-300',
+            not_started: 'bg-gray-700 text-gray-400',
         };
         const statusLabels = {
-            running:       'Running',
-            paused:        'Paused',
-            synthesizing:  'Synthesizing',
-            waiting_login: 'Waiting Login',
-            initializing:  'Initializing',
-            error:         'Error',
-            stopped:       'Stopped',
-            stale:         'Stale',
-            dead:          'Dead',
-            not_started:   'Not Started',
+            running: 'Running', paused: 'Paused', synthesizing: 'Synthesizing',
+            waiting_login: 'Waiting for Login', initializing: 'Initializing',
+            error: 'Error', stopped: 'Stopped', not_started: 'Not Started',
         };
+        const st = data.status || 'not_started';
         badge.className = `px-3 py-1 rounded-full text-sm font-medium ${statusColors[st] || statusColors.not_started}`;
         badge.textContent = statusLabels[st] || st;
 
-        // Heartbeat
-        const hbAge = data.heartbeat_age_seconds ?? null;
-        _lastHeartbeatAge = hbAge;
-        const hbDot = document.getElementById('heartbeat-dot');
-        const hbText = document.getElementById('heartbeat-text');
-        if (hbAge !== null) {
-            const color = hbAge < 30 ? 'bg-green-500 pulse-dot' : hbAge < 90 ? 'bg-yellow-500' : 'bg-red-500';
-            hbDot.className = `w-2 h-2 rounded-full ${color}`;
-            hbText.textContent = `heartbeat ${formatAge(hbAge)}`;
-        } else if (st === 'running' || st === 'synthesizing') {
-            hbDot.className = 'w-2 h-2 rounded-full bg-green-500 pulse-dot';
-            hbText.textContent = 'live';
-        } else {
-            hbDot.className = 'w-2 h-2 rounded-full bg-gray-600';
-            hbText.textContent = '';
-        }
-
-        // Action indicator
         const indicator = document.getElementById('action-indicator');
-        indicator.className = (st === 'running' || st === 'synthesizing')
-            ? 'w-2 h-2 rounded-full bg-green-500 pulse-dot'
-            : st === 'paused' ? 'w-2 h-2 rounded-full bg-yellow-500'
-            : 'w-2 h-2 rounded-full bg-gray-600';
+        indicator.className = st === 'running' ? 'w-2 h-2 rounded-full bg-green-500 pulse-dot shrink-0' :
+                              st === 'paused' ? 'w-2 h-2 rounded-full bg-yellow-500 shrink-0' :
+                              'w-2 h-2 rounded-full bg-gray-600 shrink-0';
 
-        // Uptime / cycle / PID
-        document.getElementById('uptime-badge').textContent =
-            data.uptime_seconds ? `Uptime: ${formatUptime(data.uptime_seconds)}` : '';
-        document.getElementById('cycle-badge').textContent =
-            data.current_cycle ? `Cycle #${data.current_cycle}` : '';
-        document.getElementById('pid-badge').textContent =
-            data.pid ? `PID ${data.pid}` : '';
+        if (data.status === 'not_started') return;
 
-        // Stats
-        const scanned = data.total_posts_scanned || 0;
-        const relevant = data.relevant_posts_found || 0;
-        document.getElementById('stat-scanned').textContent = scanned.toLocaleString();
-        document.getElementById('stat-relevant').textContent = relevant.toLocaleString();
+        document.getElementById('stat-scanned').textContent = (data.total_posts_scanned || 0).toLocaleString();
+        document.getElementById('stat-relevant').textContent = (data.relevant_posts_found || 0).toLocaleString();
         document.getElementById('stat-rate').textContent = data.relevance_rate || 'N/A';
         document.getElementById('stat-queue').textContent = (data.queue_size || 0).toLocaleString();
         document.getElementById('stat-today').textContent = (data.posts_saved_today || 0).toLocaleString();
 
-        // Session sub-labels
-        const sesScanned = data.session_posts_scanned;
-        const sesRelevant = data.session_relevant_found;
-        document.getElementById('stat-scanned-session').textContent =
-            sesScanned !== undefined && sesScanned > 0 ? `this session: ${sesScanned}` : 'cumulative';
-        document.getElementById('stat-relevant-session').textContent =
-            sesRelevant !== undefined && sesRelevant > 0 ? `this session: ${sesRelevant}` : 'cumulative';
-
-        // Queue visited
-        const qs = data.queue_stats || {};
-        if (qs.visited_urls !== undefined) {
-            document.getElementById('stat-queue-visited').textContent = `visited: ${qs.visited_urls.toLocaleString()}`;
-        }
-
-        // Cost
         if (data.token_usage) {
             document.getElementById('stat-cost').textContent = data.token_usage.total_cost || '$0.00';
-            const sesCost = (
-                (data.token_usage.session_nano_input || 0) * 0.20 +
-                (data.token_usage.session_nano_output || 0) * 1.25 +
-                (data.token_usage.session_powerful_input || 0) * 2.50 +
-                (data.token_usage.session_powerful_output || 0) * 15.00
-            ) / 1_000_000;
-            document.getElementById('stat-cost-session').textContent =
-                sesCost > 0 ? `this session: $${sesCost.toFixed(4)}` : 'cumulative';
-            document.getElementById('token-nano-in').textContent = (data.token_usage.nano_input || 0).toLocaleString();
-            document.getElementById('token-nano-out').textContent = (data.token_usage.nano_output || 0).toLocaleString();
-            document.getElementById('token-pow-in').textContent = (data.token_usage.powerful_input || 0).toLocaleString();
-            document.getElementById('token-pow-out').textContent = (data.token_usage.powerful_output || 0).toLocaleString();
+            document.getElementById('tt-nano-cost').textContent = data.token_usage.nano_cost || '$0.00';
+            document.getElementById('tt-pow-cost').textContent = data.token_usage.powerful_cost || '$0.00';
+            document.getElementById('tt-nano-tokens').textContent =
+                `${(data.token_usage.nano_input||0).toLocaleString()}/${(data.token_usage.nano_output||0).toLocaleString()}`;
+            document.getElementById('tt-pow-tokens').textContent =
+                `${(data.token_usage.powerful_input||0).toLocaleString()}/${(data.token_usage.powerful_output||0).toLocaleString()}`;
         }
 
-        // Current action
-        document.getElementById('current-action').textContent = data.current_action || (st === 'not_started' ? 'Agent not started' : 'Idle');
+        document.getElementById('current-action').textContent = data.current_action || 'Idle';
         document.getElementById('current-url').textContent = data.current_url || '';
 
-        // Error badge
-        const errBadge = document.getElementById('error-badge');
-        const errCount = (data.recent_errors || []).length;
-        if (errCount > 0) {
-            errBadge.textContent = `${errCount} error${errCount > 1 ? 's' : ''}`;
-            errBadge.classList.remove('hidden');
-        } else {
-            errBadge.classList.add('hidden');
-        }
-
-        // Session info bar
-        const bar = document.getElementById('session-info-bar');
-        if (data.total_sessions || data.first_started_at) {
-            bar.classList.remove('hidden');
-            document.getElementById('info-first-started').textContent =
-                data.first_started_at ? new Date(data.first_started_at).toLocaleDateString('ko-KR') : '-';
-            document.getElementById('info-sessions').textContent = data.total_sessions || 0;
-            document.getElementById('info-synthesis').textContent = data.last_synthesis_at || 'Not yet';
-        }
-
-        // Activity log
         if (data.activity_log && data.activity_log.length > 0) {
+            document.getElementById('log-count').textContent = `(${data.activity_log.length})`;
             const logDiv = document.getElementById('activity-log');
             logDiv.innerHTML = data.activity_log.slice().reverse().map(entry => {
-                const time = new Date(entry.timestamp).toLocaleTimeString('ko-KR');
-                return `<div class="log-${entry.level}"><span class="text-gray-600">${time}</span> [${escapeHtml(entry.action)}] ${escapeHtml(entry.detail)}</div>`;
+                const time = new Date(entry.timestamp).toLocaleTimeString();
+                return `<div class="log-${entry.level}"><span class="text-gray-600">${time}</span> [${entry.action}] ${esc(entry.detail)}</div>`;
             }).join('');
         }
+    }
+
+    function esc(text) {
+        if (!text) return '';
+        const d = document.createElement('div');
+        d.textContent = text;
+        return d.innerHTML;
+    }
+
+    // ── Helpers ──
+    function getAuthorDisplay(m) {
+        // Fix #3: fallback to headline or profile URL if author_name is empty
+        if (m.author_name) return m.author_name;
+        if (m.author_headline) {
+            // Extract first meaningful part of headline
+            const parts = m.author_headline.split(/[|\n@]/);
+            return parts[0].trim().substring(0, 30) || m.author_headline.substring(0, 30);
+        }
+        if (m.author_profile) {
+            const match = m.author_profile.match(/\/in\/([^/?]+)/);
+            if (match) return '@' + match[1];
+        }
+        return 'Unknown';
+    }
+
+    function getDateDisplay(m) {
+        // Fix #4: show published_date or crawled_at
+        if (m.published_date) return m.published_date;
+        if (m.crawled_at) {
+            try {
+                const d = new Date(m.crawled_at);
+                return d.toLocaleDateString('ko-KR', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' });
+            } catch(e) {}
+            return m.crawled_at.substring(0, 16).replace('T', ' ');
+        }
+        return '';
+    }
+
+    function extractPreview(contentPreview) {
+        let preview = (contentPreview || '');
+        // Find raw content after "## 원문"
+        const rawIdx = preview.indexOf('## 원문');
+        if (rawIdx > -1) {
+            preview = preview.substring(rawIdx + 5).trim();
+        } else {
+            // Strip markdown meta lines
+            preview = preview.replace(/^#[^\n]*\n/gm, '').replace(/\*\*[^*]+\*\*:?\s*[^\n]*\n?/g, '').replace(/^##[^\n]*\n/gm, '').trim();
+        }
+        return preview;
     }
 
     // ── Controls ──
     async function togglePause() {
-        try { await fetch('/api/pause', { method: 'POST' }); fetchStatus(); } catch(e) {}
+        try { await fetch('/api/pause', { method: 'POST' }); fetchStatus(); } catch(e) { console.error(e); }
     }
     async function requestStop() {
         if (!confirm('Stop the agent?')) return;
-        try { await fetch('/api/stop', { method: 'POST' }); fetchStatus(); } catch(e) {}
+        try { await fetch('/api/stop', { method: 'POST' }); fetchStatus(); } catch(e) { console.error(e); }
     }
 
-    // ── Knowledge Tree ──
-    async function loadKnowledgeTree() {
-        try {
-            const res = await fetch('/api/knowledge');
-            const tree = await res.json();
-            document.getElementById('knowledge-tree').innerHTML = renderTree(tree);
-        } catch(e) { console.error(e); }
-    }
-
-    function renderTree(items, depth = 0) {
-        if (!items || items.length === 0) return '<div class="text-gray-600 text-xs">Empty</div>';
-        return items.map(item => {
-            if (item.type === 'directory') {
-                return `<div>
-                    <div class="tree-toggle text-gray-400 hover:text-gray-200 flex items-center gap-1" onclick="this.nextElementSibling.classList.toggle('hidden')">
-                        <span class="text-xs">&#9660;</span> <span class="text-yellow-500/70">${escapeHtml(item.name)}/</span>
-                    </div>
-                    <div class="tree-children">${renderTree(item.children, depth+1)}</div>
-                </div>`;
-            } else {
-                return `<div class="file-link text-blue-400/80 hover:text-blue-300 pl-4" onclick="openFile('${escapeHtml(item.path)}')">${escapeHtml(item.name)}</div>`;
-            }
-        }).join('');
-    }
-
-    async function openFile(path) {
-        try {
-            const res = await fetch(`/api/knowledge/${path}`);
-            const data = await res.json();
-            document.getElementById('modal-title').textContent = path;
-            document.getElementById('modal-content').textContent = data.content || 'Empty file';
-            document.getElementById('file-modal').classList.remove('hidden');
-        } catch(e) { console.error(e); }
-    }
-
-    function closeModal() { document.getElementById('file-modal').classList.add('hidden'); }
-    document.getElementById('file-modal').addEventListener('click', function(e) {
-        if (e.target === this) closeModal();
-    });
-
-    // ── Recent Posts ──
+    // ── Posts Gallery ──
     async function loadRecentPosts() {
         try {
             const res = await fetch('/api/posts');
-            const posts = await res.json();
-            const tbody = document.getElementById('posts-table');
-            if (!posts || posts.length === 0) {
-                tbody.innerHTML = '<tr><td colspan="5" class="px-4 py-8 text-center text-gray-600">No posts yet</td></tr>';
-                return;
-            }
-            tbody.innerHTML = posts.slice(0, 50).map(p => {
-                const m = p.metadata || {};
-                const score = m.relevance_score || 0;
-                const scoreColor = score >= 70 ? 'text-green-400' : score >= 50 ? 'text-yellow-400' : 'text-gray-400';
-                const topics = (m.topics || []).join(', ');
-                const preview = (p.content_preview || '').substring(0, 100);
-                return `<tr class="hover:bg-gray-800/50">
-                    <td class="px-4 py-3 ${scoreColor} font-bold">${score}</td>
-                    <td class="px-4 py-3 text-gray-300">${escapeHtml(m.author_name || 'Unknown')}</td>
-                    <td class="px-4 py-3 text-gray-400 max-w-md truncate">${escapeHtml(preview)}</td>
-                    <td class="px-4 py-3 text-xs text-gray-500">${escapeHtml(topics)}</td>
-                    <td class="px-4 py-3 text-xs text-gray-600">${escapeHtml(m.crawl_source || '')}</td>
-                </tr>`;
-            }).join('');
+            _postsData = await res.json();
+            renderPosts();
         } catch(e) { console.error(e); }
     }
 
-    // ── Atoms ──
+    function renderPosts() {
+        const container = document.getElementById('posts-gallery');
+        if (!_postsData || !_postsData.length) {
+            container.innerHTML = '<div class="col-span-full text-center text-gray-600 text-sm py-8">No posts yet</div>';
+            return;
+        }
+        const showCount = _postsExpanded ? 60 : 9;
+        const hasMore = _postsData.length > showCount;
+        container.innerHTML = _postsData.slice(0, showCount).map((p, i) => {
+            const m = p.metadata || {};
+            const score = m.relevance_score || 0;
+            const scoreClass = score >= 70 ? 'bg-green-500/20 text-green-400' :
+                               score >= 50 ? 'bg-yellow-500/20 text-yellow-400' :
+                               'bg-gray-700 text-gray-400';
+            const author = getAuthorDisplay(m);
+            const date = getDateDisplay(m);
+            const preview = extractPreview(p.content_preview);
+            const topics = (m.topics || []).slice(0, 3);
+            return `<div class="bg-gray-900 rounded-xl border border-gray-800 p-4 cursor-pointer hover:border-gray-600 hover:bg-gray-900/80 transition group" onclick="openPost(${i})">
+                <div class="flex items-start justify-between gap-2 mb-2">
+                    <div class="min-w-0">
+                        <div class="text-sm font-medium text-gray-200 truncate">${esc(author)}</div>
+                        ${date ? `<div class="text-xs text-gray-500 mt-0.5">${esc(date)}</div>` : ''}
+                    </div>
+                    <span class="px-2 py-0.5 rounded-full text-xs font-bold shrink-0 ${scoreClass}">${score}</span>
+                </div>
+                <p class="text-sm text-gray-400 line-clamp-3 mb-3 leading-relaxed">${esc(preview.substring(0, 200))}</p>
+                ${topics.length ? `<div class="flex flex-wrap gap-1">${topics.map(t => `<span class="px-2 py-0.5 rounded-full text-xs bg-gray-800 text-gray-500">${esc(t)}</span>`).join('')}</div>` : ''}
+            </div>`;
+        }).join('');
+        if (hasMore && !_postsExpanded) {
+            container.innerHTML += `<div class="col-span-full text-center py-3">
+                <button onclick="_postsExpanded=true;renderPosts()" class="text-sm text-blue-400 hover:text-blue-300 px-4 py-2 rounded-lg bg-gray-800/50 hover:bg-gray-800 transition">
+                    Show all ${_postsData.length} posts ↓
+                </button>
+            </div>`;
+        }
+    }
+
+    async function openPost(index) {
+        const p = _postsData[index];
+        if (!p) return;
+        const m = p.metadata || {};
+
+        let fullContent = p.content_preview || '';
+        if (p.path) {
+            try {
+                const res = await fetch(`/api/knowledge/${p.path}`);
+                const data = await res.json();
+                if (data.content) {
+                    // Strip YAML frontmatter (between --- lines)
+                    fullContent = data.content.replace(/^---[\s\S]*?---\n*/m, '').trim();
+                }
+            } catch(e) {}
+        }
+
+        const score = m.relevance_score || 0;
+        const scoreClass = score >= 70 ? 'text-green-400' : score >= 50 ? 'text-yellow-400' : 'text-gray-400';
+        const author = getAuthorDisplay(m);
+        const date = getDateDisplay(m);
+
+        document.getElementById('modal-title').textContent = author;
+        document.getElementById('modal-body').innerHTML = `
+            <div class="flex items-center gap-3 text-xs text-gray-500 flex-wrap">
+                <span class="font-bold text-base ${scoreClass}">${score}</span>
+                ${date ? `<span>📅 ${esc(date)}</span>` : ''}
+                ${m.crawled_at ? `<span>🔍 ${esc(m.crawled_at.substring(0,16).replace('T',' '))}</span>` : ''}
+                <span>${esc(m.crawl_source || '')}</span>
+                ${m.reactions ? `<span>👍 ${m.reactions}</span>` : ''}
+                ${m.comments ? `<span>💬 ${m.comments}</span>` : ''}
+                ${m.url ? `<a href="${esc(m.url)}" target="_blank" class="text-blue-400 hover:underline ml-auto">LinkedIn ↗</a>` : ''}
+            </div>
+            ${m.author_headline ? `<div class="text-xs text-gray-500">${esc(m.author_headline)}</div>` : ''}
+            ${(m.topics||[]).length ? `<div class="flex flex-wrap gap-1">${(m.topics||[]).map(t => `<span class="px-2 py-0.5 rounded-full text-xs bg-blue-500/10 text-blue-400">${esc(t)}</span>`).join('')}</div>` : ''}
+            <div class="md-content text-sm leading-relaxed bg-gray-800/30 rounded-lg p-4 mt-2">${renderMd(fullContent)}</div>
+        `;
+        openModal();
+    }
+
+    // ── Atoms Gallery ──
     async function loadAtoms() {
         try {
             const res = await fetch('/api/atoms');
-            const atoms = await res.json();
-            const tbody = document.getElementById('atoms-table');
-            const filter = document.getElementById('atom-filter').value;
-            const filtered = filter ? atoms.filter(a => a.maturity === filter) : atoms;
-
-            const counts = {seedling: 0, budding: 0, evergreen: 0};
-            atoms.forEach(a => { if (counts[a.maturity] !== undefined) counts[a.maturity]++; });
-            document.getElementById('stat-atoms').textContent =
-                `${counts.seedling + counts.budding + counts.evergreen}`;
-            // Show breakdown in smaller text
-            document.querySelector('#stat-atoms').insertAdjacentHTML('afterend',
-                `<div class="stat-session" id="stat-atoms-breakdown">🌱${counts.seedling} 🌿${counts.budding} 🌳${counts.evergreen}</div>`
-            );
-            // Remove old breakdown if any duplicates
-            const breakdowns = document.querySelectorAll('#stat-atoms-breakdown');
-            if (breakdowns.length > 1) breakdowns[0].remove();
-
-            if (!filtered.length) {
-                tbody.innerHTML = '<tr><td colspan="5" class="px-4 py-8 text-center text-gray-600">No atoms yet</td></tr>';
-                return;
-            }
-            const emoji = { seedling: '🌱', budding: '🌿', evergreen: '🌳' };
-            tbody.innerHTML = filtered.slice(0, 80).map(a => {
-                return `<tr class="hover:bg-gray-800/50 cursor-pointer" onclick="openAtom('${escapeHtml(a.id)}')">
-                    <td class="px-4 py-2 text-center">${emoji[a.maturity] || '📄'}</td>
-                    <td class="px-4 py-2 text-gray-300 max-w-md">${escapeHtml(a.concept)}</td>
-                    <td class="px-4 py-2 text-xs text-gray-500 text-center">${a.related_count}</td>
-                    <td class="px-4 py-2 text-xs text-gray-500 text-center">${a.source_count}</td>
-                    <td class="px-4 py-2 text-xs text-gray-600">${escapeHtml(a.updated || '')}</td>
-                </tr>`;
-            }).join('');
+            _atomsData = await res.json();
+            renderAtoms();
+            updateAtomStats();
         } catch(e) { console.error(e); }
+    }
+
+    function updateAtomStats() {
+        // Fix #2: count from actual API data, not status endpoint
+        const counts = {seedling: 0, budding: 0, evergreen: 0};
+        _atomsData.forEach(a => { if (counts[a.maturity] !== undefined) counts[a.maturity]++; });
+        const total = _atomsData.length;
+        document.getElementById('stat-atoms').innerHTML =
+            `<span class="text-2xl">${total}</span> <span class="text-xs text-gray-500">🌱${counts.seedling} 🌿${counts.budding} 🌳${counts.evergreen}</span>`;
+    }
+
+    function filterAtoms(maturity) {
+        _atomFilter = maturity;
+        document.querySelectorAll('.atom-btn').forEach(btn => {
+            const active = btn.getAttribute('data-filter') === maturity;
+            btn.className = `atom-btn px-3 py-1 text-xs rounded-full transition ${active ? 'bg-blue-600 text-white' : 'bg-gray-800 text-gray-400 hover:bg-gray-700'}`;
+        });
+        renderAtoms();
+    }
+
+    function renderAtoms() {
+        const container = document.getElementById('atoms-gallery');
+        const filtered = _atomFilter ? _atomsData.filter(a => a.maturity === _atomFilter) : _atomsData;
+
+        if (!filtered.length) {
+            container.innerHTML = '<div class="col-span-full text-center text-gray-600 text-sm py-8">No atoms yet</div>';
+            return;
+        }
+
+        const emoji = { seedling: '🌱', budding: '🌿', evergreen: '🌳' };
+        const borderColor = { seedling: 'border-emerald-800/30', budding: 'border-green-700/30', evergreen: 'border-green-600/30' };
+
+        container.innerHTML = filtered.map(a => {
+            return `<div class="bg-gray-800/40 rounded-lg p-3 border ${borderColor[a.maturity] || 'border-gray-700/50'} cursor-pointer hover:bg-gray-800/70 transition" onclick="openAtom('${esc(a.id)}')">
+                <div class="flex items-center gap-2 mb-1.5">
+                    <span class="text-base">${emoji[a.maturity] || '📄'}</span>
+                    <span class="text-sm font-medium text-gray-200 truncate">${esc(a.concept)}</span>
+                </div>
+                <div class="flex items-center gap-3 text-xs text-gray-500">
+                    <span>${a.source_count || 0} sources</span>
+                    <span>${a.related_count || 0} links</span>
+                    <span class="ml-auto">${esc(a.updated || '')}</span>
+                </div>
+            </div>`;
+        }).join('');
     }
 
     async function openAtom(atomId) {
@@ -534,22 +467,79 @@
             const data = await res.json();
             const meta = data.metadata || {};
             const emoji = { seedling: '🌱', budding: '🌿', evergreen: '🌳' };
-            document.getElementById('modal-title').textContent =
-                `${emoji[meta.maturity] || ''} ${meta.concept || atomId}`;
-            const content = `ID: ${meta.id || atomId}\nMaturity: ${meta.maturity} | TTL: ${meta.ttl_days}d\nCreated: ${meta.created} | Updated: ${meta.updated}\nSources: ${(meta.sources||[]).length} | Related: ${(meta.related||[]).join(', ') || 'none'}\n\n---\n\n${data.content || ''}`;
-            document.getElementById('modal-content').textContent = content;
-            document.getElementById('file-modal').classList.remove('hidden');
+
+            document.getElementById('modal-title').textContent = `${emoji[meta.maturity] || ''} ${meta.concept || atomId}`;
+            document.getElementById('modal-body').innerHTML = `
+                <div class="flex items-center gap-3 text-xs text-gray-500 flex-wrap">
+                    <span class="font-medium text-gray-300">${meta.maturity || ''}</span>
+                    <span>TTL: ${meta.ttl_days || '?'}d</span>
+                    <span>Created: ${esc(meta.created || '')}</span>
+                    <span>Updated: ${esc(meta.updated || '')}</span>
+                </div>
+                <div class="flex flex-wrap gap-2 text-xs">
+                    <span class="text-gray-400">Sources: ${(meta.sources||[]).length}</span>
+                    <span class="text-gray-400">Related: ${(meta.related||[]).join(', ') || 'none'}</span>
+                </div>
+                <div class="md-content text-sm leading-relaxed bg-gray-800/30 rounded-lg p-4">${renderMd(data.content || '')}</div>
+            `;
+            openModal();
         } catch(e) { console.error(e); }
     }
 
+    // ── Digests ──
+    async function loadDigests() {
+        try {
+            const res = await fetch('/api/knowledge');
+            const tree = await res.json();
+            const insights = tree.find(d => d.name === 'insights');
+            if (!insights || !insights.children) return;
+            const digests = insights.children.find(d => d.name === 'digests');
+            if (!digests || !digests.children || !digests.children.length) return;
+
+            const section = document.getElementById('digests-section');
+            section.classList.remove('hidden');
+            const list = document.getElementById('digests-list');
+            list.innerHTML = digests.children.slice(-8).reverse().map(f => {
+                const name = f.name.replace('.md', '');
+                return `<div class="bg-gray-900 rounded-lg border border-gray-800 px-4 py-3 cursor-pointer hover:border-gray-600 transition" onclick="openDigest('${esc(f.path)}')">
+                    <div class="text-sm text-gray-300">📋 ${esc(name)}</div>
+                </div>`;
+            }).join('');
+        } catch(e) {}
+    }
+
+    async function openDigest(path) {
+        try {
+            const res = await fetch(`/api/knowledge/${path}`);
+            const data = await res.json();
+            document.getElementById('modal-title').textContent = path.split('/').pop();
+            document.getElementById('modal-body').innerHTML = `
+                <div class="md-content text-sm leading-relaxed">${renderMd(data.content || '')}</div>
+            `;
+            openModal();
+        } catch(e) { console.error(e); }
+    }
+
+    // ── Modal ──
+    // Fix #1: prevent background scroll when modal is open
+    function openModal() {
+        document.getElementById('modal').classList.remove('hidden');
+        document.body.classList.add('modal-open');
+    }
+    function closeModal() {
+        document.getElementById('modal').classList.add('hidden');
+        document.body.classList.remove('modal-open');
+    }
+    document.addEventListener('keydown', e => { if (e.key === 'Escape') closeModal(); });
+
     // ── Init ──
     fetchStatus();
-    loadKnowledgeTree();
     loadRecentPosts();
     loadAtoms();
+    loadDigests();
 
     setInterval(fetchStatus, 5000);
-    setInterval(() => { loadRecentPosts(); loadKnowledgeTree(); loadAtoms(); }, 30000);
+    setInterval(() => { loadRecentPosts(); loadAtoms(); }, 30000);
     </script>
 </body>
 </html>

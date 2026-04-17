@@ -54,6 +54,7 @@ class KnowledgeStore:
             "relevance_score": post.relevance_score,
             "topics": post.relevance_topics,
             "crawl_source": post.crawl_source.value,
+            "published_date": post.published_date,
             "crawled_at": post.crawled_at,
             "reactions": post.reactions_count,
             "comments": post.comments_count,
@@ -63,6 +64,8 @@ class KnowledgeStore:
         content_parts = [f"# {post.author.name or '(Unknown)'}: {post.summary or '(no summary)'}\n"]
         if post.summary:
             content_parts.append(f"**AI 요약**: {post.summary}\n")
+        if post.published_date:
+            content_parts.append(f"**게시일**: {post.published_date}\n")
         content_parts.append(f"**관련성 점수**: {post.relevance_score}/100\n")
         content_parts.append(f"**토픽**: {', '.join(post.relevance_topics) if post.relevance_topics else 'N/A'}\n")
         content_parts.append("\n## 원문\n")
@@ -344,9 +347,9 @@ class KnowledgeStore:
                 try:
                     fm = frontmatter.load(str(md_file))
                     posts.append({
-                        "path": str(md_file),
+                        "path": str(md_file.relative_to(self.base_dir)),
                         "metadata": dict(fm.metadata),
-                        "content_preview": fm.content[:300],
+                        "content_preview": fm.content[:500],
                     })
                     if len(posts) >= limit:
                         return posts
