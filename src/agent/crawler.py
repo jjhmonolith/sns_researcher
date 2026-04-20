@@ -25,6 +25,7 @@ from src.knowledge.models import (
     TokenUsage,
 )
 from src.config import get_settings, ensure_dirs
+from src.knowledge.persistent_stats import save_stats, restore_stats
 
 logger = logging.getLogger(__name__)
 
@@ -73,7 +74,12 @@ class LinkedInCrawler:
 
     async def run(self) -> None:
         """Main entry point - runs the full crawling lifecycle."""
+        # Restore cumulative stats from disk
+        restore_stats(self.stats, self.token_usage, platform="linkedin")
         self.stats.started_at = datetime.now().isoformat()
+        if not self.stats.first_started_at:
+            self.stats.first_started_at = self.stats.started_at
+        self.stats.total_sessions += 1
         self.stats.status = AgentStatus.INITIALIZING
         self._saved_post_ids = self.store.get_all_post_ids()
 
@@ -140,6 +146,10 @@ class LinkedInCrawler:
                     self.stats.queue_size = self.queue.size
                     self.stats.token_usage = self.token_usage
 
+                    # Save stats periodically
+                    if cycle % 5 == 0:
+                        save_stats(self.stats, platform="linkedin")
+
                     # Long delay between cycles
                     self._log("info", "cycle_end", f"Cycle {cycle} complete. Waiting...")
                     await navigator.random_delay()
@@ -147,7 +157,6 @@ class LinkedInCrawler:
                 except Exception as e:
                     self._log("error", "cycle_error", f"Error in cycle {cycle}: {e}")
                     self.stats.errors.append(f"[{datetime.now().isoformat()}] {str(e)}")
-                    # Wait before retrying
                     await asyncio.sleep(60)
 
         except Exception as e:
@@ -155,6 +164,7 @@ class LinkedInCrawler:
             self._log("error", "fatal_error", f"Fatal error: {e}")
             raise
         finally:
+            save_stats(self.stats, platform="linkedin")
             self.stats.status = AgentStatus.STOPPED
             await self.session.stop()
             self._log("info", "stopped", "Agent stopped.")

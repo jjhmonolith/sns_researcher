@@ -24,6 +24,9 @@ class CrawlSource(str, Enum):
     PROFILE = "profile"
     LINKED_POST = "linked_post"
     COMMENT_THREAD = "comment_thread"
+    X_FEED = "x_feed"
+    X_SEARCH = "x_search"
+    X_PROFILE = "x_profile"
 
 
 class QueueItemType(str, Enum):
@@ -80,6 +83,7 @@ class LinkedInPost(BaseModel):
     is_novel: bool = False
 
     # Metadata
+    platform: str = "linkedin"
     crawl_source: CrawlSource = CrawlSource.HOME_FEED
     crawled_at: str = Field(default_factory=lambda: datetime.now().isoformat())
     is_relevant: bool = False
@@ -111,8 +115,10 @@ class AgentStats(BaseModel):
     """Runtime statistics for the agent."""
     status: AgentStatus = AgentStatus.INITIALIZING
     started_at: str = ""
+    first_started_at: str = ""
     total_posts_scanned: int = 0
     relevant_posts_found: int = 0
+    total_sessions: int = 0
     posts_since_last_synthesis: int = 0
     last_synthesis_at: str = ""
     queue_size: int = 0

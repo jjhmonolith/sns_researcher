@@ -33,37 +33,55 @@ def create_app() -> FastAPI:
 
     @app.get("/api/status")
     async def api_status():
-        """Get current agent status as JSON."""
-        from src.main import get_crawler
+        """Get status of all crawlers."""
+        from src.main import get_crawlers
 
-        crawler = get_crawler()
-        if crawler is None:
+        crawlers = get_crawlers()
+        if not crawlers:
             return JSONResponse(
-                {"status": "not_started", "message": "Agent has not started yet."},
+                {"status": "not_started", "message": "No crawlers running."},
                 status_code=200,
             )
-        return JSONResponse(crawler.get_status_dict())
+
+        # Primary status from LinkedIn crawler (backward compat)
+        linkedin = crawlers.get("linkedin")
+        if linkedin and hasattr(linkedin, "get_status_dict"):
+            result = linkedin.get_status_dict()
+        else:
+            result = {"status": "not_started"}
+
+        # Add X crawler status if available
+        x = crawlers.get("x")
+        if x and hasattr(x, "get_status_dict"):
+            result["x_status"] = x.get_status_dict()
+
+        result["platforms"] = list(crawlers.keys())
+        return JSONResponse(result)
 
     @app.post("/api/pause")
     async def api_pause():
-        """Toggle pause/resume."""
-        from src.main import get_crawler
+        """Toggle pause/resume on all crawlers."""
+        from src.main import get_crawlers
 
-        crawler = get_crawler()
-        if crawler is None:
-            return JSONResponse({"error": "Agent not running"}, status_code=400)
-        crawler.request_pause()
-        return JSONResponse({"ok": True, "paused": crawler._pause_requested})
+        crawlers = get_crawlers()
+        if not crawlers:
+            return JSONResponse({"error": "No crawlers running"}, status_code=400)
+        for crawler in crawlers.values():
+            if hasattr(crawler, "request_pause"):
+                crawler.request_pause()
+        return JSONResponse({"ok": True})
 
     @app.post("/api/stop")
     async def api_stop():
-        """Request graceful stop."""
-        from src.main import get_crawler
+        """Request graceful stop on all crawlers."""
+        from src.main import get_crawlers
 
-        crawler = get_crawler()
-        if crawler is None:
-            return JSONResponse({"error": "Agent not running"}, status_code=400)
-        crawler.request_stop()
+        crawlers = get_crawlers()
+        if not crawlers:
+            return JSONResponse({"error": "No crawlers running"}, status_code=400)
+        for crawler in crawlers.values():
+            if hasattr(crawler, "request_stop"):
+                crawler.request_stop()
         return JSONResponse({"ok": True})
 
     @app.get("/api/posts")

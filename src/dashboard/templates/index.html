@@ -357,11 +357,17 @@
             const topics = (m.topics || []).slice(0, 3);
             const reactions = m.reactions || 0;
             const comments = m.comments || 0;
+            const platform = (m.crawl_source || '').startsWith('x_') ? 'x' : 'li';
+            const platformIcon = platform === 'x' ? '𝕏' : 'in';
+            const platformClass = platform === 'x' ? 'bg-gray-700 text-white' : 'bg-blue-700 text-white';
             return `<div class="bg-gray-900 rounded-xl border border-gray-800 p-4 cursor-pointer hover:border-gray-600 hover:bg-gray-900/80 transition group" onclick="openPost(${i})">
                 <div class="flex items-start justify-between gap-2 mb-2">
-                    <div class="min-w-0">
-                        <div class="text-sm font-medium text-gray-200 truncate">${esc(author)}</div>
-                        ${date ? `<div class="text-xs text-gray-500 mt-0.5">${esc(date)}</div>` : ''}
+                    <div class="flex items-center gap-2 min-w-0">
+                        <span class="shrink-0 w-5 h-5 rounded text-xs font-bold flex items-center justify-center ${platformClass}">${platformIcon}</span>
+                        <div class="min-w-0">
+                            <div class="text-sm font-medium text-gray-200 truncate">${esc(author)}</div>
+                            ${date ? `<div class="text-xs text-gray-500 mt-0.5">${esc(date)}</div>` : ''}
+                        </div>
                     </div>
                     <div class="flex items-center gap-2 text-xs text-gray-500 shrink-0">
                         ${reactions ? `<span>👍 ${reactions.toLocaleString()}</span>` : ''}
