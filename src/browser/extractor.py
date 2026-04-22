@@ -1,4 +1,10 @@
-"""Content extraction from LinkedIn pages - posts, profiles, links."""
+"""Content extraction from LinkedIn pages - posts, profiles, links.
+
+Updated 2026-04-22 for LinkedIn's new hashed-class DOM structure.
+Posts are now inside div[role="list"] > div children, with div[role="listitem"]
+marking actual posts. Class names are obfuscated CSS modules, so we rely on
+semantic HTML attributes (role, aria-label, href patterns, tag structure).
+"""
 
 from __future__ import annotations
 
@@ -6,7 +12,7 @@ import hashlib
 import logging
 import re
 from datetime import datetime, timedelta
-from urllib.parse import urlparse, urljoin
+from urllib.parse import urlparse
 
 from playwright.async_api import Page, ElementHandle
 
@@ -17,11 +23,9 @@ logger = logging.getLogger(__name__)
 
 def _generate_post_id(url: str, content: str) -> str:
     """Generate a deterministic post ID from URL or content."""
-    # Try to extract LinkedIn's activity ID from URL
     match = re.search(r"activity[:-](\d+)", url)
     if match:
         return f"li_{match.group(1)}"
-    # Fallback: hash of content
     h = hashlib.md5((url + content[:200]).encode()).hexdigest()[:12]
     return f"li_{h}"
 
@@ -30,9 +34,7 @@ def _clean_text(text: str) -> str:
     """Clean extracted text - normalize whitespace, remove invisible chars."""
     if not text:
         return ""
-    # Remove zero-width characters
     text = re.sub(r"[\u200b\u200c\u200d\ufeff]", "", text)
-    # Normalize whitespace but preserve newlines for readability
     lines = text.split("\n")
     lines = [re.sub(r"[ \t]+", " ", line).strip() for line in lines]
     text = "\n".join(line for line in lines if line)
@@ -40,36 +42,27 @@ def _clean_text(text: str) -> str:
 
 
 def _parse_relative_date(text: str) -> str:
-    """Parse a relative date string (Korean/English) into YYYY-MM-DD.
-
-    Handles formats like '2h', '3d', '1w', '2mo',
-    '1시간 전', '3일 전', '2주 전', '1개월 전', etc.
-    Returns empty string if unparseable.
-    """
+    """Parse a relative date string (Korean/English) into YYYY-MM-DD."""
     if not text:
         return ""
-    # Clean common LinkedIn suffixes like "1일 •", "2h •", "1일 • 수정됨"
     text = text.strip().split("•")[0].strip().split("·")[0].strip()
     if not text:
         return ""
     now = datetime.now()
 
     patterns: list[tuple[str, str]] = [
-        # Korean (with and without "전")
         (r"(\d+)\s*분\s*전?", "minutes"),
         (r"(\d+)\s*시간\s*전?", "hours"),
         (r"(\d+)\s*일\s*전?", "days"),
         (r"(\d+)\s*주\s*전?", "weeks"),
         (r"(\d+)\s*개월\s*전?", "months"),
         (r"(\d+)\s*년\s*전?", "years"),
-        # English abbreviated
         (r"(\d+)\s*min", "minutes"),
         (r"(\d+)\s*h\b", "hours"),
         (r"(\d+)\s*d\b", "days"),
         (r"(\d+)\s*w\b", "weeks"),
         (r"(\d+)\s*mo", "months"),
         (r"(\d+)\s*y\b", "years"),
-        # English verbose
         (r"(\d+)\s*minute", "minutes"),
         (r"(\d+)\s*hour", "hours"),
         (r"(\d+)\s*day", "days"),
@@ -98,20 +91,14 @@ def _parse_relative_date(text: str) -> str:
                 continue
             return dt.strftime("%Y-%m-%d")
 
-    # Try ISO-like date (e.g. "2026-04-15" or "Apr 15, 2026")
     iso_match = re.search(r"\d{4}-\d{2}-\d{2}", text)
     if iso_match:
         return iso_match.group(0)
-
     return ""
 
 
 def _extract_linkedin_urls(text: str) -> tuple[list[str], list[str], list[str]]:
-    """Extract LinkedIn profile URLs, post URLs, and external URLs from text.
-    
-    Returns:
-        (profile_urls, post_urls, external_urls)
-    """
+    """Extract LinkedIn profile URLs, post URLs, and external URLs from text."""
     profile_urls = []
     post_urls = []
     external_urls = []
@@ -137,27 +124,27 @@ def _extract_linkedin_urls(text: str) -> tuple[list[str], list[str], list[str]]:
 
 
 class ContentExtractor:
-    """Extracts structured content from LinkedIn pages."""
+    """Extracts structured content from LinkedIn pages.
+
+    LinkedIn (as of 2026-04) uses hashed CSS-module class names, making
+    class-based selectors unreliable. This extractor relies on:
+    - Semantic roles: role="list", role="listitem", role="button"
+    - ARIA attributes: aria-label, aria-hidden
+    - Tag structure: a[href*="/in/"], a[href*="/posts/"]
+    - Text patterns: "피드 게시물", "반응 N", "댓글 N", "퍼감 N"
+    """
 
     def __init__(self, page: Page) -> None:
         self.page = page
 
+    # ------------------------------------------------------------------
+    # Public extraction methods
+    # ------------------------------------------------------------------
+
     async def extract_feed_posts(self) -> list[LinkedInPost]:
         """Extract all visible posts from the current feed page."""
         posts = []
-        # LinkedIn feed post containers
-        selectors = [
-            "div.feed-shared-update-v2",
-            "div[data-urn*='activity']",
-            "div.occludable-update",
-        ]
-
-        post_elements = []
-        for selector in selectors:
-            elements = await self.page.query_selector_all(selector)
-            if elements:
-                post_elements = elements
-                break
+        post_elements = await self._get_feed_post_elements()
 
         if not post_elements:
             logger.warning("No post elements found on page.")
@@ -166,7 +153,7 @@ class ContentExtractor:
         for element in post_elements:
             try:
                 post = await self._extract_single_post(element, CrawlSource.HOME_FEED)
-                if post and post.content:
+                if post and post.content and len(post.content.strip()) > 20:
                     posts.append(post)
             except Exception as e:
                 logger.debug(f"Failed to extract post: {e}")
@@ -178,8 +165,11 @@ class ContentExtractor:
     async def extract_post_page(self, url: str, source: CrawlSource = CrawlSource.LINKED_POST) -> LinkedInPost | None:
         """Extract a single post from its dedicated page URL."""
         try:
-            # The main post content on a detail page
-            article = await self.page.query_selector("article.feed-shared-update-v2")
+            # Try new DOM: role=listitem
+            article = await self.page.query_selector("div[role='listitem']")
+            # Fallback: legacy selectors
+            if not article:
+                article = await self.page.query_selector("article.feed-shared-update-v2")
             if not article:
                 article = await self.page.query_selector("div.feed-shared-update-v2")
             if not article:
@@ -191,7 +181,6 @@ class ContentExtractor:
                     post.url = url
                     return post
 
-            # Fallback: extract from page body
             return await self._extract_from_page_body(url, source)
         except Exception as e:
             logger.error(f"Error extracting post page {url}: {e}")
@@ -200,24 +189,23 @@ class ContentExtractor:
     async def extract_profile_posts(self) -> list[LinkedInPost]:
         """Extract recent posts from a profile page."""
         posts = []
-        # Profile page activity section
-        activity_selectors = [
-            "div.profile-creator-shared-feed-update__container",
-            "div.feed-shared-update-v2",
-            "li.profile-creator-shared-content-view__list-item",
-        ]
+        # Try new DOM first, then legacy
+        post_elements = await self._get_feed_post_elements()
+        if not post_elements:
+            for sel in [
+                "div.profile-creator-shared-feed-update__container",
+                "div.feed-shared-update-v2",
+                "li.profile-creator-shared-content-view__list-item",
+            ]:
+                elements = await self.page.query_selector_all(sel)
+                if elements:
+                    post_elements = elements
+                    break
 
-        post_elements = []
-        for selector in activity_selectors:
-            elements = await self.page.query_selector_all(selector)
-            if elements:
-                post_elements = elements
-                break
-
-        for element in post_elements[:10]:  # Limit to recent 10
+        for element in post_elements[:10]:
             try:
                 post = await self._extract_single_post(element, CrawlSource.PROFILE)
-                if post and post.content:
+                if post and post.content and len(post.content.strip()) > 20:
                     posts.append(post)
             except Exception as e:
                 logger.debug(f"Failed to extract profile post: {e}")
@@ -229,23 +217,23 @@ class ContentExtractor:
     async def extract_search_results(self) -> list[LinkedInPost]:
         """Extract posts from LinkedIn search results page."""
         posts = []
-        result_selectors = [
-            "div.search-results-container li.reusable-search__result-container",
-            "div.feed-shared-update-v2",
-            "ul.reusable-search__entity-result-list li",
-        ]
+        # Try new DOM first
+        post_elements = await self._get_feed_post_elements()
+        if not post_elements:
+            for sel in [
+                "div.search-results-container li.reusable-search__result-container",
+                "div.feed-shared-update-v2",
+                "ul.reusable-search__entity-result-list li",
+            ]:
+                elements = await self.page.query_selector_all(sel)
+                if elements:
+                    post_elements = elements
+                    break
 
-        result_elements = []
-        for selector in result_selectors:
-            elements = await self.page.query_selector_all(selector)
-            if elements:
-                result_elements = elements
-                break
-
-        for element in result_elements:
+        for element in post_elements:
             try:
                 post = await self._extract_single_post(element, CrawlSource.SEARCH)
-                if post and post.content:
+                if post and post.content and len(post.content.strip()) > 20:
                     posts.append(post)
             except Exception as e:
                 logger.debug(f"Failed to extract search result: {e}")
@@ -255,13 +243,12 @@ class ContentExtractor:
         return posts
 
     async def extract_comment_authors(self) -> list[dict]:
-        """Extract comment author profiles from the current page.
-
-        Returns list of dicts: [{profile_url, name, comment_text}]
-        """
+        """Extract comment author profiles from the current page."""
         results = []
         seen_urls: set[str] = set()
 
+        # Try new DOM: buttons with aria-label containing comment-related text
+        # Also try legacy selectors
         comment_selectors = [
             "article.comments-comment-entity",
             "div.comments-comment-item",
@@ -277,58 +264,9 @@ class ContentExtractor:
 
         for element in elements[:20]:
             try:
-                author_info: dict[str, str] = {}
-
-                # Profile URL
-                link_selectors = [
-                    "a[data-tracking-control-name*='comment'][href*='/in/']",
-                    "a.comments-post-meta__name-text[href*='/in/']",
-                    "a.comments-post-meta__profile-link[href*='/in/']",
-                    "a[href*='/in/']",
-                ]
-                for sel in link_selectors:
-                    link_el = await element.query_selector(sel)
-                    if link_el:
-                        href = await link_el.get_attribute("href")
-                        if href and "/in/" in href:
-                            normalized = href.split("?")[0].rstrip("/")
-                            if normalized not in seen_urls:
-                                seen_urls.add(normalized)
-                                author_info["profile_url"] = normalized
-                            break
-
-                if not author_info.get("profile_url"):
-                    continue
-
-                # Name
-                name_selectors = [
-                    "span.comments-post-meta__name-text",
-                    "span.hoverable-link-text span",
-                    "a[href*='/in/'] span.t-bold span[aria-hidden='true']",
-                    "a[href*='/in/'] span",
-                ]
-                for sel in name_selectors:
-                    name_el = await element.query_selector(sel)
-                    if name_el:
-                        name = _clean_text(await name_el.inner_text())
-                        if name:
-                            author_info["name"] = name
-                            break
-
-                # Comment text (optional)
-                text_selectors = [
-                    "span.comments-comment-item__main-content",
-                    "span[dir='ltr']",
-                ]
-                for sel in text_selectors:
-                    text_el = await element.query_selector(sel)
-                    if text_el:
-                        text = _clean_text(await text_el.inner_text())
-                        if text and len(text) > 5:
-                            author_info["comment_text"] = text[:500]
-                            break
-
-                results.append(author_info)
+                author_info = await self._extract_comment_author_info(element, seen_urls)
+                if author_info:
+                    results.append(author_info)
             except Exception as e:
                 logger.debug(f"Failed to extract comment author: {e}")
                 continue
@@ -336,37 +274,83 @@ class ContentExtractor:
         logger.info(f"Extracted {len(results)} comment authors.")
         return results
 
+    # ------------------------------------------------------------------
+    # Private: find post container elements
+    # ------------------------------------------------------------------
+
+    async def _get_feed_post_elements(self) -> list[ElementHandle]:
+        """Find feed post elements using LinkedIn's 2026-04 DOM structure.
+
+        Posts live inside div[role="list"] > div children.
+        Real posts contain div[role="listitem"] and have substantial text.
+        UI widgets (profile prompts, sort buttons) are filtered out.
+        """
+        # Primary: new LinkedIn DOM (role=list > children)
+        post_elements = await self.page.evaluate_handle("""() => {
+            const listEl = document.querySelector('[role="list"]');
+            if (!listEl) return [];
+
+            const items = Array.from(listEl.children);
+            // Filter: real posts have role=listitem and text > 100 chars
+            return items.filter(item => {
+                const hasListItem = item.querySelector('[role="listitem"]');
+                const textLen = (item.textContent || '').length;
+                // Skip short UI widgets and empty items
+                return hasListItem && textLen > 100;
+            });
+        }""")
+
+        elements = []
+        if post_elements:
+            props = await post_elements.get_properties()
+            for prop in props.values():
+                el = prop.as_element()
+                if el:
+                    elements.append(el)
+
+        if elements:
+            logger.debug(f"Found {len(elements)} post elements via role=list")
+            return elements
+
+        # Fallback: legacy selectors
+        for sel in [
+            "div.feed-shared-update-v2",
+            "div[data-urn*='activity']",
+            "div.occludable-update",
+        ]:
+            legacy = await self.page.query_selector_all(sel)
+            if legacy:
+                logger.debug(f"Found {len(legacy)} posts via legacy selector: {sel}")
+                return legacy
+
+        return []
+
+    # ------------------------------------------------------------------
+    # Private: extract data from a single post element
+    # ------------------------------------------------------------------
+
     async def _extract_single_post(
         self, element: ElementHandle, source: CrawlSource
     ) -> LinkedInPost | None:
         """Extract data from a single post element."""
-        # Extract author info
         author = await self._extract_author(element)
-
-        # Extract content text
         content = await self._extract_content_text(element)
         if not content:
             return None
 
-        # Extract post URL
         url = await self._extract_post_url(element)
-
-        # Extract engagement metrics
         reactions, comments, reposts = await self._extract_metrics(element)
-
-        # Extract published date
         published_date = await self._extract_published_date(element)
 
-        # Extract links from content
         full_text = content + " " + (await self._extract_all_hrefs(element))
         profile_urls, post_urls, external_urls = _extract_linkedin_urls(full_text)
 
         post_id = _generate_post_id(url or "", content)
 
-        # Determine post type
+        # Detect shared/reposted content
         post_type = PostType.ORIGINAL
-        shared_indicator = await element.query_selector("span.feed-shared-header__text")
-        if shared_indicator:
+        full_post_text = await element.inner_text()
+        if "님이 퍼감" in full_post_text or "reposted" in full_post_text.lower():
             post_type = PostType.SHARED
 
         return LinkedInPost(
@@ -386,113 +370,160 @@ class ContentExtractor:
         )
 
     async def _extract_author(self, element: ElementHandle) -> Author:
-        """Extract author information from a post element."""
+        """Extract author information using new DOM structure."""
         author = Author()
         try:
-            # Author name (2026-04 LinkedIn DOM)
-            name_selectors = [
-                "a.update-components-actor__meta-link span.t-bold span[aria-hidden='true']",
-                "span.t-bold span[aria-hidden='true']",
-                "span.feed-shared-actor__name span[aria-hidden='true']",
-                "span.feed-shared-actor__name",
-                "a.feed-shared-actor__container span.t-bold span",
-                "span.update-components-actor__name span",
-            ]
-            for sel in name_selectors:
-                name_el = await element.query_selector(sel)
-                if name_el:
-                    author.name = _clean_text(await name_el.inner_text())
-                    if author.name:
-                        break
+            # New DOM: author name is in the first <a> link's aria-label or text
+            # Pattern: a[href*="/company/"] or a[href*="/in/"] with author text
+            author_data = await element.evaluate("""(el) => {
+                const result = { name: '', headline: '', profileUrl: '', linkedinId: '' };
 
-            # Author headline (2026-04 LinkedIn DOM)
-            headline_selectors = [
-                "span.update-components-actor__description span[aria-hidden='true']",
-                "span.update-components-actor__description",
-                "span.feed-shared-actor__description span[aria-hidden='true']",
-                "span.feed-shared-actor__sub-description",
-            ]
-            for sel in headline_selectors:
-                hl_el = await element.query_selector(sel)
-                if hl_el:
-                    author.headline = _clean_text(await hl_el.inner_text())
-                    if author.headline:
-                        break
+                // Find the first link to a profile or company (author link)
+                const authorLinks = el.querySelectorAll('a[href*="/in/"], a[href*="/company/"]');
+                for (const link of authorLinks) {
+                    const href = link.getAttribute('href') || '';
+                    const text = (link.textContent || '').trim();
+                    // Skip empty or very long text links (likely not author name)
+                    if (!text || text.length > 100 || text.length < 2) continue;
+                    // Skip hashtag/search links
+                    if (href.includes('/search/') || href.includes('/hashtag/')) continue;
 
-            # Author profile URL (2026-04 LinkedIn DOM)
-            link_selectors = [
-                "a.update-components-actor__meta-link[href*='/in/']",
-                "a.feed-shared-actor__container",
-                "a.update-components-actor__container",
-                "a.app-aware-link[href*='/in/']",
-            ]
-            for sel in link_selectors:
-                link_el = await element.query_selector(sel)
-                if link_el:
-                    href = await link_el.get_attribute("href")
-                    if href and "/in/" in href:
-                        author.profile_url = href.split("?")[0]
-                        # Extract ID from URL
-                        match = re.search(r"/in/([^/]+)", href)
-                        if match:
-                            author.linkedin_id = match.group(1)
-                        break
+                    result.profileUrl = href.split('?')[0];
+
+                    // Extract name from the link's text or aria-label
+                    const ariaLabel = link.querySelector('[aria-label]');
+                    if (ariaLabel) {
+                        result.name = ariaLabel.getAttribute('aria-label').split('인증됨')[0].trim();
+                    }
+                    if (!result.name) {
+                        // Get the first meaningful text (usually author/org name)
+                        const pEl = link.querySelector('p');
+                        if (pEl) result.name = pEl.textContent.trim();
+                        else result.name = text.split('\\n')[0].trim();
+                    }
+
+                    // Extract linkedin ID
+                    const inMatch = href.match(/\\/in\\/([^/]+)/);
+                    if (inMatch) result.linkedinId = inMatch[1];
+
+                    break;
+                }
+
+                // Headline: look for text near the relative date (e.g., "2주 •")
+                // In new DOM, the second text block after author is usually the headline
+                const allPs = el.querySelectorAll('p');
+                for (let i = 0; i < Math.min(allPs.length, 5); i++) {
+                    const pText = (allPs[i].textContent || '').trim();
+                    // Look for relative date patterns (indicates this is the date/headline area)
+                    if (/\\d+[시분일주개년hmdwy]/.test(pText) && pText.includes('•')) {
+                        // The text before the date might be headline
+                        const parts = pText.split('•').map(s => s.trim());
+                        if (parts.length >= 1) {
+                            // Check if date is standalone or with headline
+                            const dateMatch = parts[parts.length-1].match(/\\d+[시분일주개년hmdwy]/);
+                            if (dateMatch && parts.length > 1) {
+                                result.headline = parts.slice(0, -1).join(' ').trim();
+                            }
+                        }
+                    }
+                }
+
+                return result;
+            }""")
+
+            if author_data:
+                author.name = author_data.get("name", "")
+                author.headline = author_data.get("headline", "")
+                author.profile_url = author_data.get("profileUrl", "")
+                author.linkedin_id = author_data.get("linkedinId", "")
+
         except Exception as e:
             logger.debug(f"Error extracting author: {e}")
 
         return author
 
     async def _extract_content_text(self, element: ElementHandle) -> str:
-        """Extract the main text content from a post element."""
-        content_selectors = [
-            "div.feed-shared-update-v2__description-wrapper span[dir='ltr']",
-            "div.feed-shared-update-v2__description span.break-words",
-            "div.feed-shared-inline-show-more-text span[dir='ltr']",
-            "span.break-words span[dir='ltr']",
-            "div.update-components-text span.break-words",
-            "div.feed-shared-text span[dir='ltr']",
-        ]
+        """Extract the main text content from a post element.
 
-        for sel in content_selectors:
-            content_el = await element.query_selector(sel)
-            if content_el:
-                text = await content_el.inner_text()
-                if text and len(text.strip()) > 10:
-                    return text
-
-        # Broad fallback: try getting all text in the post body area
+        New DOM: post body text is in <p><span>...</span></p> inside the post.
+        We skip the author name, date, and engagement text blocks.
+        """
         try:
-            body = await element.query_selector("div.feed-shared-update-v2__description-wrapper")
-            if body:
-                return await body.inner_text()
-        except Exception:
-            pass
+            content = await element.evaluate("""(el) => {
+                // Strategy: find the longest <p> element that contains
+                // the actual post body (not author name, not engagement counts)
+                const allPs = el.querySelectorAll('p');
+                let bestText = '';
+                let bestLen = 0;
+
+                for (const p of allPs) {
+                    const text = (p.textContent || '').trim();
+                    // Skip short text (buttons, counts, names)
+                    if (text.length < 30) continue;
+                    // Skip engagement text
+                    if (/^(반응|댓글|퍼감|추천|좋아요|축하해요)\s*\\d*/.test(text)) continue;
+                    // Skip "피드 게시물" header
+                    if (text === '피드 게시물') continue;
+
+                    if (text.length > bestLen) {
+                        bestLen = text.length;
+                        bestText = text;
+                    }
+                }
+
+                // If no good <p> found, try getting all text from role=listitem
+                // minus the known UI sections
+                if (!bestText || bestLen < 30) {
+                    const listItem = el.querySelector('[role="listitem"]');
+                    if (listItem) {
+                        const fullText = listItem.textContent || '';
+                        // Remove common UI strings
+                        bestText = fullText
+                            .replace(/피드 게시물/g, '')
+                            .replace(/번역 표시/g, '')
+                            .replace(/…\\s*더보기/g, '')
+                            .replace(/추천|댓글|퍼가기|보내기/g, '')
+                            .trim();
+                    }
+                }
+
+                return bestText || '';
+            }""")
+            return content
+        except Exception as e:
+            logger.debug(f"Error extracting content: {e}")
 
         return ""
 
     async def _extract_post_url(self, element: ElementHandle) -> str:
         """Extract the permalink URL of a post."""
         try:
-            # Look for the timestamp link which usually contains the post URL
-            link_selectors = [
-                "a.feed-shared-actor__sub-description-link",
-                "a[data-urn*='activity']",
-                "a[href*='activity']",
-                "a.app-aware-link[href*='/feed/update/']",
-            ]
-            for sel in link_selectors:
-                link_el = await element.query_selector(sel)
-                if link_el:
-                    href = await link_el.get_attribute("href")
-                    if href:
-                        return href.split("?")[0]
-
-            # Try data-urn attribute
-            urn = await element.get_attribute("data-urn")
-            if urn:
-                match = re.search(r"activity:(\d+)", urn)
-                if match:
-                    return f"https://www.linkedin.com/feed/update/urn:li:activity:{match.group(1)}/"
+            url = await element.evaluate("""(el) => {
+                // Look for links containing /posts/ or activity
+                const links = el.querySelectorAll('a[href]');
+                for (const link of links) {
+                    const href = link.getAttribute('href') || '';
+                    if (href.includes('/posts/') || href.includes('activity:')) {
+                        return href.split('?')[0];
+                    }
+                }
+                // Try company posts links
+                for (const link of links) {
+                    const href = link.getAttribute('href') || '';
+                    if (href.includes('/company/') && href.includes('/posts/')) {
+                        return href.split('?')[0];
+                    }
+                }
+                // Try data-urn (legacy)
+                const urnEl = el.querySelector('[data-urn*="activity"]');
+                if (urnEl) {
+                    const urn = urnEl.getAttribute('data-urn');
+                    const match = urn.match(/activity:(\\d+)/);
+                    if (match) return 'https://www.linkedin.com/feed/update/urn:li:activity:' + match[1] + '/';
+                }
+                return '';
+            }""")
+            return url
         except Exception:
             pass
         return ""
@@ -500,89 +531,94 @@ class ContentExtractor:
     async def _extract_published_date(self, element: ElementHandle) -> str:
         """Extract the published date of a post element."""
         try:
-            # 1. Try <time datetime="..."> attribute (most precise)
-            time_el = await element.query_selector("time[datetime]")
-            if time_el:
-                dt_attr = await time_el.get_attribute("datetime")
-                if dt_attr:
-                    # LinkedIn sometimes uses ISO format like "2026-04-15T10:30:00.000Z"
-                    iso_match = re.search(r"\d{4}-\d{2}-\d{2}", dt_attr)
-                    if iso_match:
-                        return iso_match.group(0)
+            date_text = await element.evaluate("""(el) => {
+                // New DOM: relative date is often the first link text like "2주 •"
+                // or inside a <time> element
+                const timeEl = el.querySelector('time[datetime]');
+                if (timeEl) return timeEl.getAttribute('datetime');
 
-            # 2. Try timestamp link text (relative dates like "2h", "3일 전")
-            date_selectors = [
-                "span.update-components-actor__sub-description span[aria-hidden='true']",
-                "a.feed-shared-actor__sub-description-link span",
-                "a.feed-shared-actor__sub-description-link",
-                "span.feed-shared-actor__sub-description span[aria-hidden='true']",
-            ]
-            for sel in date_selectors:
-                el = await element.query_selector(sel)
-                if el:
-                    text = await el.inner_text()
-                    text = _clean_text(text)
-                    if text:
-                        parsed = _parse_relative_date(text)
-                        if parsed:
-                            return parsed
+                // Look for text with relative date pattern near the top of the post
+                const allText = el.querySelectorAll('p, span');
+                for (const node of allText) {
+                    const text = (node.textContent || '').trim();
+                    // Match patterns like "2주", "1주 •", "3일", "2시간", "1d", "2w", "3h"
+                    if (/^\\d+[시분일주개년hmdwy]/.test(text) || /\\d+[시분일주개년hmdwy]\\s*•/.test(text)) {
+                        return text;
+                    }
+                    // Match "N주 전" or "Nw ago" style
+                    if (/\\d+\\s*(분|시간|일|주|개월|년|min|hour|day|week|month|year)/.test(text) && text.length < 30) {
+                        return text;
+                    }
+                }
+
+                // Try first link text that looks like a date
+                const firstLinks = el.querySelectorAll('a');
+                for (const link of firstLinks) {
+                    const text = (link.textContent || '').trim();
+                    if (/\\d+[주일시분]/.test(text) && text.length < 30) return text;
+                    if (/\\d+[hdwmy]\\b/.test(text) && text.length < 20) return text;
+                }
+                return '';
+            }""")
+
+            if date_text:
+                # Try ISO format first
+                iso_match = re.search(r"\d{4}-\d{2}-\d{2}", date_text)
+                if iso_match:
+                    return iso_match.group(0)
+                return _parse_relative_date(date_text)
         except Exception as e:
             logger.debug(f"Error extracting published date: {e}")
-
         return ""
 
     async def _extract_metrics(self, element: ElementHandle) -> tuple[int, int, int]:
-        """Extract reaction, comment, and repost counts."""
-        reactions = 0
-        comments = 0
-        reposts = 0
+        """Extract reaction, comment, and repost counts.
 
+        New DOM uses text patterns like "반응 842", "댓글 4", "퍼감 30".
+        """
         try:
-            # Reactions
-            reaction_selectors = [
-                "span.social-details-social-counts__reactions-count",
-                "button.social-details-social-counts__count-value",
-            ]
-            for sel in reaction_selectors:
-                el = await element.query_selector(sel)
-                if el:
-                    text = await el.inner_text()
-                    reactions = self._parse_count(text)
-                    if reactions > 0:
-                        break
+            metrics = await element.evaluate("""(el) => {
+                const result = { reactions: 0, comments: 0, reposts: 0 };
+                const fullText = el.textContent || '';
 
-            # Comments count
-            comment_selectors = [
-                "button[aria-label*='comment'] span",
-                "li.social-details-social-counts__comments button span",
-            ]
-            for sel in comment_selectors:
-                el = await element.query_selector(sel)
-                if el:
-                    text = await el.inner_text()
-                    comments = self._parse_count(text)
-                    if comments > 0:
-                        break
+                // Korean patterns
+                let m = fullText.match(/반응\\s*([\\d,.]+[kKmM만천]?)/);
+                if (m) result.reactions = m[1];
 
-            # Reposts
-            repost_selectors = [
-                "button[aria-label*='repost'] span",
-                "li.social-details-social-counts__item--with-social-proof button span",
-            ]
-            for sel in repost_selectors:
-                el = await element.query_selector(sel)
-                if el:
-                    text = await el.inner_text()
-                    reposts = self._parse_count(text)
-                    if reposts > 0:
-                        break
+                m = fullText.match(/댓글\\s*([\\d,.]+[kKmM만천]?)/);
+                if (m) result.comments = m[1];
+
+                m = fullText.match(/퍼감\\s*([\\d,.]+[kKmM만천]?)/);
+                if (m) result.reposts = m[1];
+
+                // English fallback
+                if (!result.reactions) {
+                    m = fullText.match(/(\\d[\\d,.]*[kKmM]?)\\s*reactions?/i);
+                    if (m) result.reactions = m[1];
+                }
+                if (!result.comments) {
+                    m = fullText.match(/(\\d[\\d,.]*[kKmM]?)\\s*comments?/i);
+                    if (m) result.comments = m[1];
+                }
+                if (!result.reposts) {
+                    m = fullText.match(/(\\d[\\d,.]*[kKmM]?)\\s*reposts?/i);
+                    if (m) result.reposts = m[1];
+                }
+
+                return result;
+            }""")
+
+            reactions = self._parse_count(str(metrics.get("reactions", "0")))
+            comments = self._parse_count(str(metrics.get("comments", "0")))
+            reposts = self._parse_count(str(metrics.get("reposts", "0")))
+            return reactions, comments, reposts
+
         except Exception as e:
             logger.debug(f"Error extracting metrics: {e}")
-
-        return reactions, comments, reposts
+        return 0, 0, 0
 
     async def _extract_all_hrefs(self, element: ElementHandle) -> str:
-        """Extract all href values from links within the element as a space-joined string."""
+        """Extract all href values from links within the element."""
         try:
             links = await element.query_selector_all("a[href]")
             hrefs = []
@@ -594,12 +630,79 @@ class ContentExtractor:
         except Exception:
             return ""
 
+    async def _extract_from_page_body(self, url: str, source: CrawlSource) -> LinkedInPost | None:
+        """Fallback extraction from the entire page body."""
+        try:
+            body_text = await self.page.inner_text("body")
+            if body_text and len(body_text.strip()) > 50:
+                content = _clean_text(body_text[:3000])
+                post_id = _generate_post_id(url, content)
+                return LinkedInPost(
+                    post_id=post_id,
+                    url=url,
+                    content=content,
+                    crawl_source=source,
+                )
+        except Exception:
+            pass
+        return None
+
+    async def _extract_comment_author_info(self, element: ElementHandle, seen_urls: set) -> dict | None:
+        """Extract a comment author's info from a comment element."""
+        author_info: dict[str, str] = {}
+
+        link_selectors = [
+            "a[data-tracking-control-name*='comment'][href*='/in/']",
+            "a.comments-post-meta__name-text[href*='/in/']",
+            "a.comments-post-meta__profile-link[href*='/in/']",
+            "a[href*='/in/']",
+        ]
+        for sel in link_selectors:
+            link_el = await element.query_selector(sel)
+            if link_el:
+                href = await link_el.get_attribute("href")
+                if href and "/in/" in href:
+                    normalized = href.split("?")[0].rstrip("/")
+                    if normalized not in seen_urls:
+                        seen_urls.add(normalized)
+                        author_info["profile_url"] = normalized
+                    break
+
+        if not author_info.get("profile_url"):
+            return None
+
+        name_selectors = [
+            "span.comments-post-meta__name-text",
+            "span.hoverable-link-text span",
+            "a[href*='/in/'] span",
+        ]
+        for sel in name_selectors:
+            name_el = await element.query_selector(sel)
+            if name_el:
+                name = _clean_text(await name_el.inner_text())
+                if name:
+                    author_info["name"] = name
+                    break
+
+        text_selectors = [
+            "span.comments-comment-item__main-content",
+            "span[dir='ltr']",
+        ]
+        for sel in text_selectors:
+            text_el = await element.query_selector(sel)
+            if text_el:
+                text = _clean_text(await text_el.inner_text())
+                if text and len(text) > 5:
+                    author_info["comment_text"] = text[:500]
+                    break
+
+        return author_info
+
     @staticmethod
     def _parse_count(text: str) -> int:
         """Parse a count string like '1,234' or '1.2K' into an integer."""
         if not text:
             return 0
-        # Take only the first line — LinkedIn often appends "손해성님 외 11명" etc.
         text = text.strip().split("\n")[0].strip()
         text = text.replace(",", "").replace(" ", "")
         text = re.sub(r"[^0-9.kKmM만천]", "", text)

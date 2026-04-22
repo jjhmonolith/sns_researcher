@@ -1,26 +1,6 @@
 {
   "authors": [
     {
-      "profile_url": "https://www.linkedin.com/in/jaekwon-son-a7808810",
-      "name": "JaeKwon Son",
-      "headline": "Founder & CEO The Miilk",
-      "first_seen": "2026-04-22T11:58:16.304361",
-      "last_visited": "",
-      "visit_count": 0,
-      "relevant_post_count": 2,
-      "platform_followed": false
-    },
-    {
-      "profile_url": "https://www.linkedin.com/in/neerajkumarsinghb",
-      "name": "Neeraj Kumar Singh B.",
-      "headline": "Building security infrastructure for $8B+ fintech | AI + Zero Trust + Supply Chain Security | Ex-Meta, JPMChase, Wayfair",
-      "first_seen": "2026-04-22T12:12:21.190435",
-      "last_visited": "",
-      "visit_count": 0,
-      "relevant_post_count": 2,
-      "platform_followed": false
-    },
-    {
       "profile_url": "https://www.linkedin.com/in/jaeha-lee",
       "name": "Jaeha Lee",
       "headline": "Co-founder & CTO at Lattice",
@@ -178,58 +158,74 @@
       "platform_followed": false
     },
     {
-      "profile_url": "https://www.linkedin.com/in/gb-jeong",
-      "name": "Goobong Jeong",
-      "headline": "Host of Ralphthon | Optimistic Engineer",
-      "first_seen": "2026-04-17T14:32:41.075291",
-      "last_visited": "2026-04-18T07:06:00.759573",
-      "visit_count": 9,
-      "relevant_post_count": 3
-    },
-    {
-      "profile_url": "https://www.linkedin.com/in/yuuki08noah",
-      "name": "방세준",
-      "headline": "DevOps Engineer | AWS/GCP · Kubernetes · Terraform · CI/CD · Proxmox · Ansible | Open to Opportunities",
-      "first_seen": "2026-04-17T20:38:37.181654",
-      "last_visited": "2026-04-18T07:16:41.907737",
-      "visit_count": 6,
-      "relevant_post_count": 3
-    },
-    {
-      "profile_url": "https://www.linkedin.com/in/huijin-jo",
-      "name": "조희진 Huijin Jo",
-      "headline": "HR & ER을 데이터와 AI로 연결하는 노무사 | Decision Intelligence",
-      "first_seen": "2026-04-17T14:24:48.389353",
-      "last_visited": "2026-04-18T07:29:54.414309",
-      "visit_count": 9,
-      "relevant_post_count": 3
-    },
-    {
-      "profile_url": "https://www.linkedin.com/in/jung-ho-ahn-9876748",
-      "name": "Jung Ho Ahn",
-      "headline": "Professor at Seoul National University",
-      "first_seen": "2026-04-17T23:44:27.425441",
-      "last_visited": "2026-04-18T08:04:12.800504",
-      "visit_count": 5,
-      "relevant_post_count": 3
-    },
-    {
-      "profile_url": "https://www.linkedin.com/in/%ED%95%9C%EC%8A%AC-%EA%B9%80-a99b81226",
-      "name": "김한슬",
-      "headline": "모비데이즈 HRBP",
-      "first_seen": "2026-04-18T00:17:52.639551",
-      "last_visited": "2026-04-18T08:25:32.333628",
-      "visit_count": 5,
-      "relevant_post_count": 3
+      "profile_url": "https://www.linkedin.com/in/marianserbann",
+      "name": "Marian Serban",
+      "headline": "AI & Cloud Infrastructure | P&L & GTM Leader | Digital Transformation | AI Automation | Revenue, Margin & Customer Success",
+      "first_seen": "2026-04-22T12:23:30.898197",
+      "last_visited": "",
+      "visit_count": 0,
+      "relevant_post_count": 3,
+      "platform_followed": false
     },
     {
       "profile_url": "https://www.linkedin.com/in/sojeong-%EC%A0%84%EC%86%8C%EC%A0%95-jeon",
       "name": "전소정 JeonSojeong",
       "headline": "UXUI designer",
       "first_seen": "2026-04-17T16:10:25.081728",
-      "last_visited": "2026-04-18T08:27:26.015777",
-      "visit_count": 9,
-      "relevant_post_count": 3
+      "last_visited": "2026-04-22T12:31:32.615148",
+      "visit_count": 10,
+      "relevant_post_count": 3,
+      "platform_followed": true
+    },
+    {
+      "profile_url": "https://www.linkedin.com/in/%ED%95%9C%EC%8A%AC-%EA%B9%80-a99b81226",
+      "name": "김한슬",
+      "headline": "모비데이즈 HRBP",
+      "first_seen": "2026-04-18T00:17:52.639551",
+      "last_visited": "2026-04-22T12:32:06.481904",
+      "visit_count": 6,
+      "relevant_post_count": 3,
+      "platform_followed": true
+    },
+    {
+      "profile_url": "https://www.linkedin.com/in/jung-ho-ahn-9876748",
+      "name": "Jung Ho Ahn",
+      "headline": "Professor at Seoul National University",
+      "first_seen": "2026-04-17T23:44:27.425441",
+      "last_visited": "2026-04-22T12:36:52.213228",
+      "visit_count": 6,
+      "relevant_post_count": 3,
+      "platform_followed": true
+    },
+    {
+      "profile_url": "https://www.linkedin.com/in/huijin-jo",
+      "name": "조희진 Huijin Jo",
+      "headline": "HR & ER을 데이터와 AI로 연결하는 노무사 | Decision Intelligence",
+      "first_seen": "2026-04-17T14:24:48.389353",
+      "last_visited": "2026-04-22T12:37:12.965174",
+      "visit_count": 10,
+      "relevant_post_count": 3,
+      "platform_followed": true
+    },
+    {
+      "profile_url": "https://www.linkedin.com/in/yuuki08noah",
+      "name": "방세준",
+      "headline": "DevOps Engineer | AWS/GCP · Kubernetes · Terraform · CI/CD · Proxmox · Ansible | Open to Opportunities",
+      "first_seen": "2026-04-17T20:38:37.181654",
+      "last_visited": "2026-04-22T12:41:34.474339",
+      "visit_count": 7,
+      "relevant_post_count": 3,
+      "platform_followed": true
+    },
+    {
+      "profile_url": "https://www.linkedin.com/in/raghubagalkoti",
+      "name": "Raghavendra Bagalkoti",
+      "headline": "Building the Future of Finance with AI + Cloud | VP at Barclays | Simplifying Capital Markets | Thought Leader in Tech-Driven Finance",
+      "first_seen": "2026-04-22T12:34:18.758020",
+      "last_visited": "",
+      "visit_count": 0,
+      "relevant_post_count": 4,
+      "platform_followed": false
     },
     {
       "profile_url": "https://www.linkedin.com/in/lain-kim-278833246",
@@ -432,6 +428,16 @@
       "platform_followed": true
     },
     {
+      "profile_url": "https://www.linkedin.com/in/gb-jeong",
+      "name": "Goobong Jeong",
+      "headline": "Host of Ralphthon | Optimistic Engineer",
+      "first_seen": "2026-04-17T14:32:41.075291",
+      "last_visited": "2026-04-22T12:42:16.069793",
+      "visit_count": 10,
+      "relevant_post_count": 7,
+      "platform_followed": true
+    },
+    {
       "profile_url": "https://www.linkedin.com/in/hansol-nam",
       "name": "Hansol Nam",
       "headline": "CTO @ PeekabooLabs | Empowering AI Everywhere | ex-Hyundai",
@@ -472,13 +478,13 @@
       "platform_followed": true
     },
     {
-      "profile_url": "https://www.linkedin.com/in/marianserbann",
-      "name": "Marian Serban",
-      "headline": "AI & Cloud Infrastructure | P&L & GTM Leader | Digital Transformation | AI Automation | Revenue, Margin & Customer Success",
-      "first_seen": "2026-04-22T12:23:30.898197",
+      "profile_url": "https://www.linkedin.com/in/jyoung105",
+      "name": "Jeongmin Lee",
+      "headline": "Control opinions with AI",
+      "first_seen": "2026-04-22T12:43:18.531720",
       "last_visited": "",
       "visit_count": 0,
-      "relevant_post_count": 3,
+      "relevant_post_count": 2,
       "platform_followed": false
     }
   ]
