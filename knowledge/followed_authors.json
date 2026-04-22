@@ -1,29 +1,20 @@
 {
   "authors": [
     {
-      "profile_url": "https://www.linkedin.com/in/yoonseok-yang",
-      "name": "Yoonseok Yang",
-      "headline": "CEO @ Pensive",
-      "first_seen": "2026-04-17T23:55:05.138663",
-      "last_visited": "2026-04-18T08:17:35.782646",
-      "visit_count": 5,
-      "relevant_post_count": 1
-    },
-    {
-      "profile_url": "https://x.com/kkotkkio",
-      "name": "Working-Ref",
-      "headline": "",
-      "first_seen": "2026-04-20T12:41:43.719271",
+      "profile_url": "https://www.linkedin.com/in/jaekwon-son-a7808810",
+      "name": "JaeKwon Son",
+      "headline": "Founder & CEO The Miilk",
+      "first_seen": "2026-04-22T11:58:16.304361",
       "last_visited": "",
       "visit_count": 0,
       "relevant_post_count": 2,
       "platform_followed": false
     },
     {
-      "profile_url": "https://x.com/ThePaypers",
-      "name": "The Paypers",
-      "headline": "",
-      "first_seen": "2026-04-22T12:04:08.404874",
+      "profile_url": "https://www.linkedin.com/in/neerajkumarsinghb",
+      "name": "Neeraj Kumar Singh B.",
+      "headline": "Building security infrastructure for $8B+ fintech | AI + Zero Trust + Supply Chain Security | Ex-Meta, JPMChase, Wayfair",
+      "first_seen": "2026-04-22T12:12:21.190435",
       "last_visited": "",
       "visit_count": 0,
       "relevant_post_count": 2,
@@ -177,6 +168,16 @@
       "platform_followed": false
     },
     {
+      "profile_url": "https://www.linkedin.com/in/sungjae-shim-9b353159",
+      "name": "SungJae Shim",
+      "headline": "Builder of systems, ideas, and experiences that move people.",
+      "first_seen": "2026-04-22T11:57:20.568212",
+      "last_visited": "",
+      "visit_count": 0,
+      "relevant_post_count": 3,
+      "platform_followed": false
+    },
+    {
       "profile_url": "https://www.linkedin.com/in/gb-jeong",
       "name": "Goobong Jeong",
       "headline": "Host of Ralphthon | Optimistic Engineer",
@@ -231,202 +232,204 @@
       "relevant_post_count": 3
     },
     {
-      "profile_url": "https://www.linkedin.com/in/zahiwehbe",
-      "name": "Zahi Wehbe",
-      "headline": "Head of Innovation Hub & STEAM Education | Program Director & Curriculum Architect - MIT International Science and Technology Initiatives Bahrain | PMP® | AI & Robotics | International & National AI Award 2024-2025",
-      "first_seen": "2026-04-18T00:26:10.718202",
-      "last_visited": "2026-04-18T08:32:15.452493",
-      "visit_count": 5,
-      "relevant_post_count": 3
-    },
-    {
-      "profile_url": "https://www.linkedin.com/in/keunyoung0924",
-      "name": "임근영",
-      "headline": "Performance & Growth Marketer at Wantedlab",
-      "first_seen": "2026-04-18T04:32:57.075770",
-      "last_visited": "2026-04-18T08:34:19.575793",
-      "visit_count": 3,
-      "relevant_post_count": 3
-    },
-    {
-      "profile_url": "https://www.linkedin.com/in/swooparupa",
-      "name": "최성우",
-      "headline": "Product Designer",
-      "first_seen": "2026-04-17T18:28:43.582319",
-      "last_visited": "2026-04-18T08:48:00.253400",
-      "visit_count": 8,
-      "relevant_post_count": 3
-    },
-    {
-      "profile_url": "https://www.linkedin.com/in/%EA%B7%BC%EC%A3%BC-%EC%86%8C-5862bb370",
-      "name": "소근주",
-      "headline": "--",
-      "first_seen": "2026-04-17T14:32:49.199295",
-      "last_visited": "2026-04-18T07:11:18.996563",
-      "visit_count": 9,
-      "relevant_post_count": 4
-    },
-    {
-      "profile_url": "https://www.linkedin.com/in/too-important",
-      "name": "yohan Lee",
-      "headline": "Product design lead at 오늘의집",
-      "first_seen": "2026-04-17T20:38:11.171295",
-      "last_visited": "2026-04-18T07:16:30.366983",
-      "visit_count": 6,
-      "relevant_post_count": 4
-    },
-    {
-      "profile_url": "https://www.linkedin.com/in/nsagay",
-      "name": "Nicola Sagay",
-      "headline": "Founder, Brink Think Labs | Generative AI, Data & Power BI | AI Literacy & Safety in Education",
-      "first_seen": "2026-04-17T16:33:47.807324",
-      "last_visited": "2026-04-18T07:20:55.715748",
-      "visit_count": 8,
-      "relevant_post_count": 4
-    },
-    {
-      "profile_url": "https://www.linkedin.com/in/zoon-chang",
-      "name": "Zoon Chang",
-      "headline": "Venture Capitalist | Strong belief in an outlier-led future",
-      "first_seen": "2026-04-17T15:00:35.844725",
-      "last_visited": "2026-04-18T07:25:15.933070",
-      "visit_count": 9,
-      "relevant_post_count": 4
-    },
-    {
-      "profile_url": "https://www.linkedin.com/in/bora-kang-0122b170",
-      "name": "강보라",
-      "headline": "Growth PM · 프로덕트 분석가 | Mixpanel · MoEngage · VWO Partner | 데이터와 AI로 조직과 개인의 잠재력을 성장으로 구현하게 돕습니다",
-      "first_seen": "2026-04-17T17:16:32.903380",
-      "last_visited": "2026-04-18T07:42:12.956885",
-      "visit_count": 8,
-      "relevant_post_count": 4
-    },
-    {
-      "profile_url": "https://www.linkedin.com/in/amanda-bickerstaff-edu",
-      "name": "Amanda Bickerstaff",
-      "headline": "Educator | AI for Education Founder | Keynote | Researcher | LinkedIn Top Voice in Education",
-      "first_seen": "2026-04-17T17:28:30.532641",
-      "last_visited": "2026-04-18T07:55:16.844585",
-      "visit_count": 8,
-      "relevant_post_count": 4
-    },
-    {
-      "profile_url": "https://www.linkedin.com/in/haeseongson",
-      "name": "손해성",
-      "headline": "Imaginable, Achievable.",
-      "first_seen": "2026-04-17T14:24:43.677765",
-      "last_visited": "2026-04-18T08:52:21.838725",
-      "visit_count": 10,
-      "relevant_post_count": 4
+      "profile_url": "https://www.linkedin.com/in/lain-kim-278833246",
+      "name": "Lain Kim",
+      "headline": "Product designer at Ohouse(오늘의집)",
+      "first_seen": "2026-04-17T14:32:33.243422",
+      "last_visited": "2026-04-22T11:50:39.997961",
+      "visit_count": 11,
+      "relevant_post_count": 4,
+      "platform_followed": true
     },
     {
       "profile_url": "https://www.linkedin.com/in/jeffrey-dongkyu",
       "name": "Jeffrey Kim",
       "headline": "Open Source Lover | AI Researcher | Research Intern @KAIST | Leader @ NomaDamas | Creator of AutoRAG",
       "first_seen": "2026-04-17T22:43:34.739660",
-      "last_visited": "2026-04-18T08:55:59.839618",
-      "visit_count": 6,
-      "relevant_post_count": 4
+      "last_visited": "2026-04-22T11:51:16.637736",
+      "visit_count": 7,
+      "relevant_post_count": 4,
+      "platform_followed": true
     },
     {
-      "profile_url": "https://www.linkedin.com/in/lain-kim-278833246",
-      "name": "Lain Kim",
-      "headline": "Product designer at Ohouse(오늘의집)",
-      "first_seen": "2026-04-17T14:32:33.243422",
-      "last_visited": "2026-04-18T08:58:55.398156",
+      "profile_url": "https://www.linkedin.com/in/haeseongson",
+      "name": "손해성",
+      "headline": "Imaginable, Achievable.",
+      "first_seen": "2026-04-17T14:24:43.677765",
+      "last_visited": "2026-04-22T11:56:20.928249",
+      "visit_count": 11,
+      "relevant_post_count": 4,
+      "platform_followed": true
+    },
+    {
+      "profile_url": "https://www.linkedin.com/in/zoon-chang",
+      "name": "Zoon Chang",
+      "headline": "Venture Capitalist | Strong belief in an outlier-led future",
+      "first_seen": "2026-04-17T15:00:35.844725",
+      "last_visited": "2026-04-22T12:01:28.378574",
       "visit_count": 10,
-      "relevant_post_count": 4
+      "relevant_post_count": 4,
+      "platform_followed": true
     },
     {
-      "profile_url": "https://www.linkedin.com/in/woongjae-lee",
-      "name": "이웅재",
-      "headline": "AI system architect",
-      "first_seen": "2026-04-17T18:40:55.871998",
-      "last_visited": "2026-04-18T07:11:11.650837",
-      "visit_count": 7,
-      "relevant_post_count": 5
-    },
-    {
-      "profile_url": "https://www.linkedin.com/in/seungpil",
-      "name": "Seungpil Lee",
-      "headline": "Founder at 사용성연구소",
-      "first_seen": "2026-04-17T15:00:28.073245",
-      "last_visited": "2026-04-18T07:20:46.576799",
+      "profile_url": "https://www.linkedin.com/in/nsagay",
+      "name": "Nicola Sagay",
+      "headline": "Founder, Brink Think Labs | Generative AI, Data & Power BI | AI Literacy & Safety in Education",
+      "first_seen": "2026-04-17T16:33:47.807324",
+      "last_visited": "2026-04-22T12:10:57.940027",
       "visit_count": 9,
-      "relevant_post_count": 5
+      "relevant_post_count": 4,
+      "platform_followed": true
     },
     {
-      "profile_url": "https://www.linkedin.com/in/patrick-kim-07a0613b8",
-      "name": "Patrick Kim",
-      "headline": "1인 지식 기업 ‘시그널 랩(Signal Lab)’ 대표, B2B 콘텐츠 전략가 및 전문 블로거",
-      "first_seen": "2026-04-17T17:16:07.512418",
-      "last_visited": "2026-04-18T07:29:42.356244",
-      "visit_count": 8,
-      "relevant_post_count": 5
-    },
-    {
-      "profile_url": "https://www.linkedin.com/in/hoyeonleekr",
-      "name": "HoYeon Lee",
-      "headline": "Builder & Educator",
-      "first_seen": "2026-04-17T19:33:16.298557",
-      "last_visited": "2026-04-18T07:45:21.543977",
+      "profile_url": "https://www.linkedin.com/in/too-important",
+      "name": "yohan Lee",
+      "headline": "Product design lead at 오늘의집",
+      "first_seen": "2026-04-17T20:38:11.171295",
+      "last_visited": "2026-04-22T12:11:21.419790",
       "visit_count": 7,
-      "relevant_post_count": 5
+      "relevant_post_count": 4,
+      "platform_followed": true
     },
     {
-      "profile_url": "https://www.linkedin.com/in/kiwoong-yeom",
-      "name": "염기웅",
-      "headline": "GPU Poor",
-      "first_seen": "2026-04-17T19:59:58.936344",
-      "last_visited": "2026-04-18T08:11:27.260057",
-      "visit_count": 7,
-      "relevant_post_count": 5
+      "profile_url": "https://www.linkedin.com/in/%EA%B7%BC%EC%A3%BC-%EC%86%8C-5862bb370",
+      "name": "소근주",
+      "headline": "--",
+      "first_seen": "2026-04-17T14:32:49.199295",
+      "last_visited": "2026-04-22T12:16:25.536606",
+      "visit_count": 10,
+      "relevant_post_count": 4,
+      "platform_followed": true
     },
     {
-      "profile_url": "https://www.linkedin.com/in/ethan-yj-cho",
-      "name": "조여준 Ethan Cho",
-      "headline": "CIO @ TheVentures | ex-Google, Samsung",
-      "first_seen": "2026-04-17T23:54:57.000338",
-      "last_visited": "2026-04-18T08:17:27.619449",
-      "visit_count": 5,
-      "relevant_post_count": 5
+      "profile_url": "https://www.linkedin.com/in/swooparupa",
+      "name": "최성우",
+      "headline": "Product Designer",
+      "first_seen": "2026-04-17T18:28:43.582319",
+      "last_visited": "2026-04-22T12:16:55.195329",
+      "visit_count": 9,
+      "relevant_post_count": 4,
+      "platform_followed": true
+    },
+    {
+      "profile_url": "https://www.linkedin.com/in/keunyoung0924",
+      "name": "임근영",
+      "headline": "Performance & Growth Marketer at Wantedlab",
+      "first_seen": "2026-04-18T04:32:57.075770",
+      "last_visited": "2026-04-22T12:21:28.157536",
+      "visit_count": 4,
+      "relevant_post_count": 4,
+      "platform_followed": true
+    },
+    {
+      "profile_url": "https://www.linkedin.com/in/zahiwehbe",
+      "name": "Zahi Wehbe",
+      "headline": "Head of Innovation Hub & STEAM Education | Program Director & Curriculum Architect - MIT International Science and Technology Initiatives Bahrain | PMP® | AI & Robotics | International & National AI Award 2024-2025",
+      "first_seen": "2026-04-18T00:26:10.718202",
+      "last_visited": "2026-04-22T12:22:00.168390",
+      "visit_count": 6,
+      "relevant_post_count": 4,
+      "platform_followed": true
     },
     {
       "profile_url": "https://www.linkedin.com/in/seyun-kim-5ab15b1b6",
       "name": "Seyun Kim",
       "headline": "Software engineer",
       "first_seen": "2026-04-17T16:41:29.170976",
-      "last_visited": "2026-04-18T08:58:48.142022",
+      "last_visited": "2026-04-22T11:28:09.986348",
+      "visit_count": 10,
+      "relevant_post_count": 5,
+      "platform_followed": true
+    },
+    {
+      "profile_url": "https://www.linkedin.com/in/patrick-kim-07a0613b8",
+      "name": "Patrick Kim",
+      "headline": "1인 지식 기업 ‘시그널 랩(Signal Lab)’ 대표, B2B 콘텐츠 전략가 및 전문 블로거",
+      "first_seen": "2026-04-17T17:16:07.512418",
+      "last_visited": "2026-04-22T11:42:44.957230",
       "visit_count": 9,
-      "relevant_post_count": 5
+      "relevant_post_count": 5,
+      "platform_followed": true
+    },
+    {
+      "profile_url": "https://www.linkedin.com/in/woongjae-lee",
+      "name": "이웅재",
+      "headline": "AI system architect",
+      "first_seen": "2026-04-17T18:40:55.871998",
+      "last_visited": "2026-04-22T11:46:28.211687",
+      "visit_count": 8,
+      "relevant_post_count": 5,
+      "platform_followed": true
+    },
+    {
+      "profile_url": "https://www.linkedin.com/in/amanda-bickerstaff-edu",
+      "name": "Amanda Bickerstaff",
+      "headline": "Educator | AI for Education Founder | Keynote | Researcher | LinkedIn Top Voice in Education",
+      "first_seen": "2026-04-17T17:28:30.532641",
+      "last_visited": "2026-04-22T11:56:52.971826",
+      "visit_count": 9,
+      "relevant_post_count": 5,
+      "platform_followed": true
     },
     {
       "profile_url": "https://www.linkedin.com/in/sangwon-kang-v",
       "name": "Sangwon Kang",
       "headline": "CEO at 래티스",
       "first_seen": "2026-04-17T14:32:38.517009",
-      "last_visited": "2026-04-18T07:05:49.400536",
+      "last_visited": "2026-04-22T11:27:39.535802",
+      "visit_count": 10,
+      "relevant_post_count": 6,
+      "platform_followed": true
+    },
+    {
+      "profile_url": "https://www.linkedin.com/in/ethan-yj-cho",
+      "name": "조여준 Ethan Cho",
+      "headline": "CIO @ TheVentures | ex-Google, Samsung",
+      "first_seen": "2026-04-17T23:54:57.000338",
+      "last_visited": "2026-04-22T11:31:17.316570",
+      "visit_count": 6,
+      "relevant_post_count": 6,
+      "platform_followed": true
+    },
+    {
+      "profile_url": "https://www.linkedin.com/in/hoyeonleekr",
+      "name": "HoYeon Lee",
+      "headline": "Builder & Educator",
+      "first_seen": "2026-04-17T19:33:16.298557",
+      "last_visited": "2026-04-22T11:42:11.325341",
+      "visit_count": 8,
+      "relevant_post_count": 6,
+      "platform_followed": true
+    },
+    {
+      "profile_url": "https://www.linkedin.com/in/seungpil",
+      "name": "Seungpil Lee",
+      "headline": "Founder at 사용성연구소",
+      "first_seen": "2026-04-17T15:00:28.073245",
+      "last_visited": "2026-04-22T11:45:56.549488",
+      "visit_count": 10,
+      "relevant_post_count": 6,
+      "platform_followed": true
+    },
+    {
+      "profile_url": "https://www.linkedin.com/in/bora-kang-0122b170",
+      "name": "강보라",
+      "headline": "Growth PM · 프로덕트 분석가 | Mixpanel · MoEngage · VWO Partner | 데이터와 AI로 조직과 개인의 잠재력을 성장으로 구현하게 돕습니다",
+      "first_seen": "2026-04-17T17:16:32.903380",
+      "last_visited": "2026-04-22T12:00:57.407077",
       "visit_count": 9,
-      "relevant_post_count": 6
+      "relevant_post_count": 6,
+      "platform_followed": true
     },
     {
       "profile_url": "https://www.linkedin.com/in/ignacioprma",
       "name": "Ignacio P.",
       "headline": "AI That Runs Your Marketing | Helped Founders Raise $25M+ | Marketing & Growth | Stealth Mode",
       "first_seen": "2026-04-17T20:38:42.197400",
-      "last_visited": "2026-04-18T07:25:04.055713",
-      "visit_count": 6,
-      "relevant_post_count": 6
-    },
-    {
-      "profile_url": "https://www.linkedin.com/in/ht-hwang",
-      "name": "황현태",
-      "headline": "CEO & Co-founder @SpaceY",
-      "first_seen": "2026-04-17T23:54:41.730827",
-      "last_visited": "2026-04-18T08:02:27.431591",
-      "visit_count": 5,
-      "relevant_post_count": 6
+      "last_visited": "2026-04-22T11:23:55.375082",
+      "visit_count": 7,
+      "relevant_post_count": 7,
+      "platform_followed": true
     },
     {
       "profile_url": "https://www.linkedin.com/in/hansol-nam",
@@ -436,6 +439,26 @@
       "last_visited": "2026-04-22T11:20:07.212507",
       "visit_count": 12,
       "relevant_post_count": 8,
+      "platform_followed": true
+    },
+    {
+      "profile_url": "https://www.linkedin.com/in/ht-hwang",
+      "name": "황현태",
+      "headline": "CEO & Co-founder @SpaceY",
+      "first_seen": "2026-04-17T23:54:41.730827",
+      "last_visited": "2026-04-22T11:23:25.388731",
+      "visit_count": 6,
+      "relevant_post_count": 8,
+      "platform_followed": true
+    },
+    {
+      "profile_url": "https://www.linkedin.com/in/kiwoong-yeom",
+      "name": "염기웅",
+      "headline": "GPU Poor",
+      "first_seen": "2026-04-17T19:59:58.936344",
+      "last_visited": "2026-04-22T11:31:58.940353",
+      "visit_count": 8,
+      "relevant_post_count": 9,
       "platform_followed": true
     },
     {
@@ -449,13 +472,13 @@
       "platform_followed": true
     },
     {
-      "profile_url": "https://x.com/Computerworld",
-      "name": "Computerworld",
-      "headline": "",
-      "first_seen": "2026-04-22T12:04:32.280305",
+      "profile_url": "https://www.linkedin.com/in/marianserbann",
+      "name": "Marian Serban",
+      "headline": "AI & Cloud Infrastructure | P&L & GTM Leader | Digital Transformation | AI Automation | Revenue, Margin & Customer Success",
+      "first_seen": "2026-04-22T12:23:30.898197",
       "last_visited": "",
       "visit_count": 0,
-      "relevant_post_count": 1,
+      "relevant_post_count": 3,
       "platform_followed": false
     }
   ]
