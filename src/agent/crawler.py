@@ -187,6 +187,14 @@ class LinkedInCrawler:
             self._log("info", "follow_visit", f"Re-visiting followed author: {name}")
 
             try:
+                # Follow on LinkedIn if not yet followed
+                if self.followed_authors.needs_platform_follow(url):
+                    followed = await navigator.follow_user(url)
+                    if followed:
+                        self.followed_authors.mark_platform_followed(url)
+                        self._log("info", "platform_follow", f"Followed on LinkedIn: {name}")
+                    await navigator.short_delay()
+
                 await navigator.go_to_profile(url)
                 posts = await extractor.extract_profile_posts()
                 await self._process_posts(posts)

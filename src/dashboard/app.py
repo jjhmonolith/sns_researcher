@@ -34,9 +34,11 @@ def create_app() -> FastAPI:
     @app.get("/api/status")
     async def api_status():
         """Get status of all crawlers."""
-        from src.main import get_crawlers
-
-        crawlers = get_crawlers()
+        import sys
+        main_mod = sys.modules.get("src.main") or sys.modules.get("__main__")
+        crawlers = {}
+        if main_mod and hasattr(main_mod, "_crawlers"):
+            crawlers = main_mod._crawlers
         if not crawlers:
             return JSONResponse(
                 {"status": "not_started", "message": "No crawlers running."},
@@ -58,12 +60,16 @@ def create_app() -> FastAPI:
         result["platforms"] = list(crawlers.keys())
         return JSONResponse(result)
 
+    def _get_crawlers() -> dict:
+        import sys
+        main_mod = sys.modules.get("src.main") or sys.modules.get("__main__")
+        if main_mod and hasattr(main_mod, "_crawlers"):
+            return main_mod._crawlers
+        return {}
+
     @app.post("/api/pause")
     async def api_pause():
-        """Toggle pause/resume on all crawlers."""
-        from src.main import get_crawlers
-
-        crawlers = get_crawlers()
+        crawlers = _get_crawlers()
         if not crawlers:
             return JSONResponse({"error": "No crawlers running"}, status_code=400)
         for crawler in crawlers.values():
@@ -73,10 +79,7 @@ def create_app() -> FastAPI:
 
     @app.post("/api/stop")
     async def api_stop():
-        """Request graceful stop on all crawlers."""
-        from src.main import get_crawlers
-
-        crawlers = get_crawlers()
+        crawlers = _get_crawlers()
         if not crawlers:
             return JSONResponse({"error": "No crawlers running"}, status_code=400)
         for crawler in crawlers.values():

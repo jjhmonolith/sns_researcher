@@ -58,7 +58,12 @@ class FollowedAuthors:
         If already present, increments relevant_post_count.
         Returns True if newly added, False if already existed.
         """
-        if not profile_url or "/in/" not in profile_url:
+        if not profile_url:
+            return False
+        # Accept LinkedIn (/in/) and X (x.com/ or twitter.com/) profiles
+        is_linkedin = "/in/" in profile_url
+        is_x = "x.com/" in profile_url or "twitter.com/" in profile_url
+        if not is_linkedin and not is_x:
             return False
 
         existing = self._find(profile_url)
@@ -83,6 +88,7 @@ class FollowedAuthors:
             "last_visited": "",
             "visit_count": 0,
             "relevant_post_count": 1,
+            "platform_followed": False,
         }
         self._authors.append(author)
         self._save()
@@ -139,6 +145,20 @@ class FollowedAuthors:
             author["last_visited"] = datetime.now().isoformat()
             author["visit_count"] = author.get("visit_count", 0) + 1
             self._save()
+
+    def mark_platform_followed(self, profile_url: str) -> None:
+        """Mark that the user was followed on the actual platform."""
+        author = self._find(profile_url)
+        if author:
+            author["platform_followed"] = True
+            self._save()
+
+    def needs_platform_follow(self, profile_url: str) -> bool:
+        """Check if this author needs to be followed on the platform."""
+        author = self._find(profile_url)
+        if not author:
+            return False
+        return not author.get("platform_followed", False)
 
     def get_stats(self) -> dict:
         return {

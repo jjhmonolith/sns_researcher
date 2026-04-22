@@ -59,6 +59,59 @@ class XNavigator:
         await self.page.goto(url, wait_until="domcontentloaded", timeout=30000)
         await self._wait_for_page_load()
 
+    async def follow_user(self, handle_or_url: str) -> bool:
+        """Navigate to an X profile and click Follow.
+
+        Returns True if follow was clicked, False if already following or failed.
+        """
+        if handle_or_url.startswith("http"):
+            url = handle_or_url
+        elif handle_or_url.startswith("@"):
+            url = f"https://x.com/{handle_or_url[1:]}"
+        else:
+            url = f"https://x.com/{handle_or_url}"
+
+        logger.info(f"[X] Attempting to follow: {url[:60]}...")
+        await self.page.goto(url, wait_until="domcontentloaded", timeout=30000)
+        await self._wait_for_page_load()
+
+        try:
+            # Check for Follow button (data-testid based — most stable)
+            # X uses data-testid with user ID patterns for follow buttons
+            follow_btns = await self.page.query_selector_all(
+                "button[data-testid$='-follow'], button[data-testid$='-unfollow']"
+            )
+            for btn in follow_btns:
+                testid = await btn.get_attribute("data-testid") or ""
+                if "unfollow" in testid:
+                    logger.info(f"[X] Already following: {url[:50]}")
+                    return False
+                if "follow" in testid:
+                    await btn.click()
+                    await asyncio.sleep(random.uniform(1.0, 2.0))
+                    logger.info(f"[X] Followed: {url[:50]}")
+                    return True
+
+            # Fallback: aria-label based
+            btns = await self.page.query_selector_all("button[aria-label*='Follow']")
+            for btn in btns:
+                label = (await btn.get_attribute("aria-label") or "").lower()
+                if "unfollow" in label or "following" in label:
+                    logger.info(f"[X] Already following: {url[:50]}")
+                    return False
+                if "follow" in label:
+                    visible = await btn.is_visible()
+                    if visible:
+                        await btn.click()
+                        await asyncio.sleep(random.uniform(1.0, 2.0))
+                        logger.info(f"[X] Followed: {url[:50]}")
+                        return True
+
+        except Exception as e:
+            logger.debug(f"[X] Failed to follow: {e}")
+
+        return False
+
     async def go_to_post(self, url: str) -> None:
         """Navigate to a specific post/tweet URL."""
         logger.info(f"[X] Navigating to post: {url[:80]}...")

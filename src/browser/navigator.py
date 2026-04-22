@@ -181,7 +181,7 @@ class Navigator:
 
     async def go_to_profile(self, url: str) -> None:
         """Navigate to a LinkedIn profile page.
-        
+
         Args:
             url: Full LinkedIn profile URL.
         """
@@ -192,6 +192,56 @@ class Navigator:
         logger.info(f"Navigating to profile: {url[:80]}...")
         await self.page.goto(url, wait_until="domcontentloaded", timeout=30000)
         await self._wait_for_page_load()
+
+    async def follow_user(self, profile_url: str) -> bool:
+        """Navigate to a LinkedIn profile and click Follow.
+
+        Returns True if follow was clicked, False if already following or failed.
+        """
+        # Go to the main profile page (not /recent-activity/)
+        url = profile_url.split("?")[0].rstrip("/")
+        logger.info(f"Attempting to follow: {url[:60]}...")
+        await self.page.goto(url, wait_until="domcontentloaded", timeout=30000)
+        await self._wait_for_page_load()
+
+        try:
+            # Check if already following (button says "Following" or "팔로잉")
+            follow_btn_selectors = [
+                "button[aria-label*='Follow']",
+                "button[aria-label*='팔로우']",
+                "button.follow",
+            ]
+            for sel in follow_btn_selectors:
+                btns = await self.page.query_selector_all(sel)
+                for btn in btns:
+                    text = (await btn.inner_text()).strip().lower()
+                    # Skip if already following
+                    if "following" in text or "팔로잉" in text or "unfollow" in text:
+                        logger.info(f"Already following: {url[:50]}")
+                        return False
+                    # Click the Follow button
+                    if "follow" in text or "팔로우" in text:
+                        visible = await btn.is_visible()
+                        if visible:
+                            await btn.click()
+                            await asyncio.sleep(random.uniform(1.0, 2.0))
+                            logger.info(f"Followed on LinkedIn: {url[:50]}")
+                            return True
+
+            # Fallback: try the main CTA button area
+            main_btn = await self.page.query_selector("div.pvs-profile-actions button:first-child")
+            if main_btn:
+                text = (await main_btn.inner_text()).strip().lower()
+                if "follow" in text or "팔로우" in text:
+                    await main_btn.click()
+                    await asyncio.sleep(random.uniform(1.0, 2.0))
+                    logger.info(f"Followed on LinkedIn (fallback): {url[:50]}")
+                    return True
+
+        except Exception as e:
+            logger.debug(f"Failed to follow on LinkedIn: {e}")
+
+        return False
 
     async def random_delay(self, min_override: int | None = None, max_override: int | None = None) -> None:
         """Wait a random amount of time to avoid detection.

@@ -194,6 +194,14 @@ class XCrawler:
             self.stats.current_action = f"[X] Following: {name}"
             self._log("info", "x_follow_visit", f"[X] Visiting: {name}")
             try:
+                # Follow on X if not yet followed
+                if self.followed_authors.needs_platform_follow(url):
+                    followed = await navigator.follow_user(url)
+                    if followed:
+                        self.followed_authors.mark_platform_followed(url)
+                        self._log("info", "x_platform_follow", f"[X] Followed: {name}")
+                    await navigator.short_delay()
+
                 await navigator.go_to_profile(url)
                 posts = await extractor.extract_profile_posts()
                 await self._process_posts(posts)
