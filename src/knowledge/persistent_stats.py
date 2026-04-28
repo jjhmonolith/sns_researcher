@@ -14,9 +14,10 @@ logger = logging.getLogger(__name__)
 STATS_FILE = DATA_DIR / "stats.json"
 
 
-def save_stats(stats: AgentStats, platform: str = "linkedin") -> None:
+def save_stats(stats: AgentStats, platform: str = "linkedin", stats_file: Path | None = None) -> None:
     """Save cumulative stats to disk."""
-    all_stats = _load_all()
+    file = stats_file or STATS_FILE
+    all_stats = _load_all(stats_file=stats_file)
     all_stats[platform] = {
         "total_posts_scanned": stats.total_posts_scanned,
         "relevant_posts_found": stats.relevant_posts_found,
@@ -28,13 +29,13 @@ def save_stats(stats: AgentStats, platform: str = "linkedin") -> None:
         "powerful_input_tokens": stats.token_usage.powerful_input_tokens,
         "powerful_output_tokens": stats.token_usage.powerful_output_tokens,
     }
-    DATA_DIR.mkdir(parents=True, exist_ok=True)
-    STATS_FILE.write_text(json.dumps(all_stats, indent=2, ensure_ascii=False))
+    file.parent.mkdir(parents=True, exist_ok=True)
+    file.write_text(json.dumps(all_stats, indent=2, ensure_ascii=False))
 
 
-def restore_stats(stats: AgentStats, token_usage: TokenUsage, platform: str = "linkedin") -> None:
+def restore_stats(stats: AgentStats, token_usage: TokenUsage, platform: str = "linkedin", stats_file: Path | None = None) -> None:
     """Restore cumulative stats from disk into the given objects."""
-    all_stats = _load_all()
+    all_stats = _load_all(stats_file=stats_file)
     saved = all_stats.get(platform, {})
     if not saved:
         return
@@ -55,10 +56,11 @@ def restore_stats(stats: AgentStats, token_usage: TokenUsage, platform: str = "l
     )
 
 
-def _load_all() -> dict:
-    if STATS_FILE.exists():
+def _load_all(stats_file: Path | None = None) -> dict:
+    file = stats_file or STATS_FILE
+    if file.exists():
         try:
-            return json.loads(STATS_FILE.read_text())
+            return json.loads(file.read_text())
         except Exception:
             pass
     return {}

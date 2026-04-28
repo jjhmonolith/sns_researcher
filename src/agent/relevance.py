@@ -16,17 +16,20 @@ if TYPE_CHECKING:
 
 logger = logging.getLogger(__name__)
 
-SYSTEM_PROMPT = """당신은 LinkedIn 포스트의 관련성 및 참신성(Novelty) 분석 전문가입니다.
+DEFAULT_TOPIC = "기업과 조직의 AX (AI Transformation)"
 
-## 1단계: 관련성 판별 (AX 주제)
-포스트가 "기업과 조직의 AX (AI Transformation)" 범위에 속하는지 판단합니다.
+SYSTEM_PROMPT_TEMPLATE = """당신은 소셜 미디어 포스트의 관련성 및 참신성(Novelty) 분석 전문가입니다.
 
-관련 주제: 기업 AI 도입/전환 전략, AI 업무 프로세스 혁신, 기업용 AI 솔루션/도구/플랫폼,
-AI 역량 구축/인재 양성, AI 거버넌스/윤리/규제, AI 산업/비즈니스 모델 변화,
-경영진 AI 비전, AI 스타트업 B2B, 생성형 AI 기업 활용, AI Agent 업무 자동화.
+## 1단계: 관련성 판별
+포스트가 아래 주제 범위에 속하는지 판단합니다.
 
-비관련: 기업 적용 무관한 순수 기술 논문, AI 무관 개인 일상, 단순 채용 공고,
-AI 무관 광고, 교육/EdTech (기업 AX와 무관), 개인 브랜딩/자기PR.
+### 주제
+{topic_description}
+
+### 검색 키워드 참고
+{keywords_text}
+
+비관련: 주제와 무관한 개인 일상, 단순 채용 공고, 무관한 광고, 개인 브랜딩/자기PR.
 
 ## 2단계: 참신성 판별 (Novelty)
 관련 포스트라면, 이 내용이 얼마나 새롭고 가치 있는 인사이트인지 판단합니다.
@@ -39,7 +42,7 @@ AI 무관 광고, 교육/EdTech (기업 AX와 무관), 개인 브랜딩/자기PR
 - 최신 도구/플랫폼의 실사용 리뷰
 
 낮은 참신성 (0-30):
-- "AI가 비즈니스를 바꾸고 있다" 류의 일반론
+- 일반론의 반복
 - 이미 잘 알려진 사실의 반복
 - 구체적 데이터 없는 추상적 주장
 - 유행어 나열 (buzzword-heavy) 콘텐츠
@@ -47,7 +50,7 @@ AI 무관 광고, 교육/EdTech (기업 AX와 무관), 개인 브랜딩/자기PR
 기존 지식 베이스에 이미 유사한 인사이트가 있다면 참신성을 낮게 평가하세요.
 
 응답은 반드시 아래 JSON 형식으로만 답하세요:
-{
+{{
   "is_relevant": true/false,
   "novelty_score": 0-100 사이 정수,
   "novelty_reason": "이 포스트가 참신하거나 참신하지 않은 이유 한 줄",
@@ -55,7 +58,16 @@ AI 무관 광고, 교육/EdTech (기업 AX와 무관), 개인 브랜딩/자기PR
   "summary": "1-2문장 요약",
   "should_follow_links": true/false,
   "follow_targets": ["따라가볼 URL이나 프로필"]
-}"""
+}}"""
+
+
+def build_system_prompt(topic_description: str, keywords: list[str]) -> str:
+    """Build the system prompt dynamically from session topic/keywords."""
+    keywords_text = ", ".join(keywords) if keywords else "(없음)"
+    return SYSTEM_PROMPT_TEMPLATE.format(
+        topic_description=topic_description,
+        keywords_text=keywords_text,
+    )
 
 
 class RelevanceJudge:
@@ -63,6 +75,8 @@ class RelevanceJudge:
 
     def __init__(
         self,
+        topic_description: str = "",
+        keywords: list[str] | None = None,
         token_usage: TokenUsage | None = None,
         store: KnowledgeStore | None = None,
     ) -> None:
@@ -72,6 +86,10 @@ class RelevanceJudge:
         self.threshold = settings.relevance_threshold
         self.token_usage = token_usage or TokenUsage()
         self.store = store
+        self._system_prompt = build_system_prompt(
+            topic_description or DEFAULT_TOPIC,
+            keywords or [],
+        )
 
     async def judge(self, post: LinkedInPost) -> LinkedInPost:
         """Analyze a post's relevance and novelty, update it with results."""
@@ -89,7 +107,7 @@ class RelevanceJudge:
             response = await self.client.chat.completions.create(
                 model=self.model,
                 messages=[
-                    {"role": "system", "content": SYSTEM_PROMPT},
+                    {"role": "system", "content": self._system_prompt},
                     {"role": "user", "content": user_message},
                 ],
                 temperature=0.1,
@@ -110,7 +128,7 @@ class RelevanceJudge:
 
                 post.novelty_score = novelty_score
                 post.novelty_reason = result.get("novelty_reason", "")
-                post.relevance_score = novelty_score  # backward compat
+                post.relevance_score = novelty_score
                 post.is_novel = novelty_score >= self.threshold
                 post.is_relevant = is_ax_relevant and post.is_novel
                 post.relevance_topics = result.get("topics", [])
@@ -121,7 +139,7 @@ class RelevanceJudge:
                 logger.info(
                     f"Novelty: {novelty_score}/100 "
                     f"{'[RELEVANT+NOVEL]' if post.is_relevant else '[skip]'} "
-                    f"(AX={is_ax_relevant}) "
+                    f"(relevant={is_ax_relevant}) "
                     f"- {post.summary[:60]}..."
                 )
 
@@ -160,7 +178,6 @@ class RelevanceJudge:
         if post.mentioned_profiles:
             parts.append(f"\n언급된 프로필: {', '.join(post.mentioned_profiles[:5])}")
 
-        # Inject existing knowledge for novelty comparison
         if self.store:
             atoms_context = self.store.get_atoms_context(max_chars=4000)
             if atoms_context:

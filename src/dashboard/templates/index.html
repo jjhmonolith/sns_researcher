@@ -57,9 +57,12 @@
     <!-- Header -->
     <header class="bg-gray-900 border-b border-gray-800 px-6 py-4">
         <div class="max-w-7xl mx-auto flex items-center justify-between">
-            <div>
-                <h1 class="text-xl font-bold text-white">LinkedIn AX Research Agent</h1>
-                <p class="text-sm text-gray-400 mt-0.5">Enterprise AI Transformation</p>
+            <div class="flex items-center gap-3">
+                <a href="/" class="text-gray-500 hover:text-gray-300 transition text-lg">&#8592;</a>
+                <div>
+                    <h1 class="text-xl font-bold text-white">{{ session_name | default("Research Agent") }}</h1>
+                    <p class="text-sm text-gray-400 mt-0.5">{{ session_topic | default("") }}</p>
+                </div>
             </div>
             <div class="flex items-center gap-3">
                 <span id="status-badge" class="px-3 py-1 rounded-full text-sm font-medium bg-gray-700 text-gray-300">
@@ -190,6 +193,9 @@
     </main>
 
     <script>
+    const SESSION_ID = '{{ session_id | default("") }}';
+    const API_BASE = SESSION_ID ? `/api/sessions/${SESSION_ID}` : '/api';
+
     let _postsData = [];
     let _atomsData = [];
     let _atomFilter = '';
@@ -211,7 +217,7 @@
     // ── Status polling ──
     async function fetchStatus() {
         try {
-            const res = await fetch('/api/status');
+            const res = await fetch(`${API_BASE}/status`);
             const data = await res.json();
             updateDashboard(data);
         } catch (e) { console.error('Status fetch error:', e); }
@@ -325,17 +331,17 @@
 
     // ── Controls ──
     async function togglePause() {
-        try { await fetch('/api/pause', { method: 'POST' }); fetchStatus(); } catch(e) { console.error(e); }
+        try { await fetch(`${API_BASE}/pause`, { method: 'POST' }); fetchStatus(); } catch(e) { console.error(e); }
     }
     async function requestStop() {
         if (!confirm('Stop the agent?')) return;
-        try { await fetch('/api/stop', { method: 'POST' }); fetchStatus(); } catch(e) { console.error(e); }
+        try { await fetch(`${API_BASE}/stop`, { method: 'POST' }); fetchStatus(); } catch(e) { console.error(e); }
     }
 
     // ── Posts Gallery ──
     async function loadRecentPosts() {
         try {
-            const res = await fetch('/api/posts');
+            const res = await fetch(`${API_BASE}/posts`);
             _postsData = await res.json();
             renderPosts();
         } catch(e) { console.error(e); }
@@ -357,9 +363,10 @@
             const topics = (m.topics || []).slice(0, 3);
             const reactions = m.reactions || 0;
             const comments = m.comments || 0;
-            const platform = (m.crawl_source || '').startsWith('x_') ? 'x' : 'li';
-            const platformIcon = platform === 'x' ? '𝕏' : 'in';
-            const platformClass = platform === 'x' ? 'bg-gray-700 text-white' : 'bg-blue-700 text-white';
+            const cs = m.crawl_source || '';
+            const platform = cs.startsWith('x_') ? 'x' : cs.startsWith('fb_') ? 'fb' : 'li';
+            const platformIcon = platform === 'x' ? '𝕏' : platform === 'fb' ? 'f' : 'in';
+            const platformClass = platform === 'x' ? 'bg-gray-700 text-white' : platform === 'fb' ? 'bg-blue-500 text-white' : 'bg-blue-700 text-white';
             return `<div class="bg-gray-900 rounded-xl border border-gray-800 p-4 cursor-pointer hover:border-gray-600 hover:bg-gray-900/80 transition group" onclick="openPost(${i})">
                 <div class="flex items-start justify-between gap-2 mb-2">
                     <div class="flex items-center gap-2 min-w-0">
@@ -395,7 +402,7 @@
         let fullContent = p.content_preview || '';
         if (p.path) {
             try {
-                const res = await fetch(`/api/knowledge/${p.path}`);
+                const res = await fetch(`${API_BASE}/knowledge/${p.path}`);
                 const data = await res.json();
                 if (data.content) {
                     // Strip YAML frontmatter (between --- lines)
@@ -430,7 +437,7 @@
     // ── Atoms Gallery ──
     async function loadAtoms() {
         try {
-            const res = await fetch('/api/atoms');
+            const res = await fetch(`${API_BASE}/atoms`);
             _atomsData = await res.json();
             renderAtoms();
             updateAtomStats();
@@ -484,7 +491,7 @@
 
     async function openAtom(atomId) {
         try {
-            const res = await fetch(`/api/atoms/${atomId}`);
+            const res = await fetch(`${API_BASE}/atoms/${atomId}`);
             const data = await res.json();
             const meta = data.metadata || {};
             const emoji = { seedling: '🌱', budding: '🌿', evergreen: '🌳' };
@@ -510,7 +517,7 @@
     // ── Digests ──
     async function loadDigests() {
         try {
-            const res = await fetch('/api/knowledge');
+            const res = await fetch(`${API_BASE}/knowledge`);
             const tree = await res.json();
             const insights = tree.find(d => d.name === 'insights');
             if (!insights || !insights.children) return;
@@ -531,7 +538,7 @@
 
     async function openDigest(path) {
         try {
-            const res = await fetch(`/api/knowledge/${path}`);
+            const res = await fetch(`${API_BASE}/knowledge/${path}`);
             const data = await res.json();
             document.getElementById('modal-title').textContent = path.split('/').pop();
             document.getElementById('modal-body').innerHTML = `
@@ -558,7 +565,7 @@
 
     async function loadPeople() {
         try {
-            const res = await fetch('/api/people');
+            const res = await fetch(`${API_BASE}/people`);
             _peopleData = await res.json();
             renderPeople();
         } catch(e) { console.error(e); }
@@ -591,7 +598,7 @@
         let fullContent = p.content_preview || '';
         if (p.path) {
             try {
-                const res = await fetch(`/api/knowledge/${p.path}`);
+                const res = await fetch(`${API_BASE}/knowledge/${p.path}`);
                 const data = await res.json();
                 if (data.content) {
                     fullContent = data.content.replace(/^---[\s\S]*?---\n*/m, '').trim();

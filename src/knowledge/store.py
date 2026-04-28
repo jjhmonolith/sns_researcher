@@ -18,8 +18,8 @@ logger = logging.getLogger(__name__)
 class KnowledgeStore:
     """Manages the Markdown-based knowledge repository."""
 
-    def __init__(self) -> None:
-        self.base_dir = KNOWLEDGE_DIR
+    def __init__(self, base_dir: Path | None = None) -> None:
+        self.base_dir = base_dir or KNOWLEDGE_DIR
         self._ensure_structure()
 
     def _ensure_structure(self) -> None:

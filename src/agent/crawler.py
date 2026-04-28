@@ -27,22 +27,50 @@ from src.knowledge.models import (
 from src.config import get_settings, ensure_dirs
 from src.knowledge.persistent_stats import save_stats, restore_stats
 
+# Optional session config import
+try:
+    from src.session import SessionConfig
+except ImportError:
+    SessionConfig = None
+
 logger = logging.getLogger(__name__)
 
 
 class LinkedInCrawler:
     """Main agent that continuously crawls LinkedIn for AX-related content."""
 
-    def __init__(self) -> None:
-        ensure_dirs()
+    def __init__(self, session_config=None) -> None:
+        self._session_config = session_config
         self.settings = get_settings()
-        self.session = BrowserSession()
-        self.store = KnowledgeStore()
-        self.queue = ExplorationQueue()
-        self.followed_authors = FollowedAuthors()
-        self.token_usage = TokenUsage()
-        self.relevance = RelevanceJudge(token_usage=self.token_usage, store=self.store)
-        self.synthesizer = KnowledgeSynthesizer(store=self.store, token_usage=self.token_usage)
+
+        if session_config:
+            session_config.ensure_dirs()
+            self.session = BrowserSession(cookies_path=session_config.cookies_linkedin_path)
+            self.store = KnowledgeStore(base_dir=session_config.knowledge_dir)
+            self.queue = ExplorationQueue(file_path=session_config.queue_path)
+            self.followed_authors = FollowedAuthors(file_path=session_config.followed_authors_path)
+            self.token_usage = TokenUsage()
+            self._keywords = session_config.keywords
+            self._stats_file = session_config.stats_path
+            topic = session_config.topic_description
+        else:
+            ensure_dirs()
+            self.session = BrowserSession()
+            self.store = KnowledgeStore()
+            self.queue = ExplorationQueue()
+            self.followed_authors = FollowedAuthors()
+            self.token_usage = TokenUsage()
+            self._keywords = self.settings.keywords_list
+            self._stats_file = None
+            topic = ""
+
+        self.relevance = RelevanceJudge(
+            topic_description=topic,
+            keywords=self._keywords,
+            token_usage=self.token_usage,
+            store=self.store,
+        )
+        self.synthesizer = KnowledgeSynthesizer(store=self.store, token_usage=self.token_usage, topic_description=topic)
         self.weekly_synthesizer = WeeklySynthesizer(store=self.store, token_usage=self.token_usage)
         self.monthly_synthesizer = MonthlySynthesizer(store=self.store, token_usage=self.token_usage)
 
@@ -75,7 +103,7 @@ class LinkedInCrawler:
     async def run(self) -> None:
         """Main entry point - runs the full crawling lifecycle."""
         # Restore cumulative stats from disk
-        restore_stats(self.stats, self.token_usage, platform="linkedin")
+        restore_stats(self.stats, self.token_usage, platform="linkedin", stats_file=self._stats_file)
         self.stats.started_at = datetime.now().isoformat()
         if not self.stats.first_started_at:
             self.stats.first_started_at = self.stats.started_at
@@ -124,8 +152,8 @@ class LinkedInCrawler:
                     await self._visit_followed_authors(navigator, extractor)
 
                     # Phase 2: Search with keywords (rotate Korean + English)
-                    keyword_idx = (cycle - 1) % len(self.settings.keywords_list)
-                    keyword = self.settings.keywords_list[keyword_idx]
+                    keyword_idx = (cycle - 1) % len(self._keywords)
+                    keyword = self._keywords[keyword_idx]
                     await self._scan_search(navigator, extractor, keyword)
 
                     # Phase 3: Global hashtag feed (every 3rd cycle)
@@ -148,7 +176,7 @@ class LinkedInCrawler:
 
                     # Save stats periodically
                     if cycle % 5 == 0:
-                        save_stats(self.stats, platform="linkedin")
+                        save_stats(self.stats, platform="linkedin", stats_file=self._stats_file)
 
                     # Long delay between cycles
                     self._log("info", "cycle_end", f"Cycle {cycle} complete. Waiting...")
@@ -164,7 +192,7 @@ class LinkedInCrawler:
             self._log("error", "fatal_error", f"Fatal error: {e}")
             raise
         finally:
-            save_stats(self.stats, platform="linkedin")
+            save_stats(self.stats, platform="linkedin", stats_file=self._stats_file)
             self.stats.status = AgentStatus.STOPPED
             await self.session.stop()
             self._log("info", "stopped", "Agent stopped.")

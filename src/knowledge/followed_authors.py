@@ -21,14 +21,15 @@ class FollowedAuthors:
     Completely separate from ExplorationQueue — bypasses visited_urls.
     """
 
-    def __init__(self) -> None:
+    def __init__(self, file_path: Path | None = None) -> None:
+        self._file_path = file_path or (KNOWLEDGE_DIR / "followed_authors.json")
         self._authors: list[dict] = []
         self._load()
 
     def _load(self) -> None:
-        if AUTHORS_FILE.exists():
+        if self._file_path.exists():
             try:
-                data = json.loads(AUTHORS_FILE.read_text())
+                data = json.loads(self._file_path.read_text())
                 self._authors = data.get("authors", [])
                 logger.info(f"Loaded {len(self._authors)} followed authors.")
             except Exception as e:
@@ -38,9 +39,9 @@ class FollowedAuthors:
             self._authors = []
 
     def _save(self) -> None:
-        AUTHORS_FILE.parent.mkdir(parents=True, exist_ok=True)
+        self._file_path.parent.mkdir(parents=True, exist_ok=True)
         data = {"authors": self._authors}
-        AUTHORS_FILE.write_text(json.dumps(data, indent=2, ensure_ascii=False))
+        self._file_path.write_text(json.dumps(data, indent=2, ensure_ascii=False))
 
     def _normalize_url(self, url: str) -> str:
         return url.split("?")[0].rstrip("/")

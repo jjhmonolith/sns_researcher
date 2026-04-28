@@ -17,7 +17,9 @@ logger = logging.getLogger(__name__)
 class BrowserSession:
     """Manages Playwright browser lifecycle, login, and cookie persistence."""
 
-    def __init__(self) -> None:
+    def __init__(self, cookies_path: Path | None = None) -> None:
+        self._cookies_path = cookies_path or COOKIES_PATH
+        self._global_cookies_path = COOKIES_PATH
         self._playwright: Playwright | None = None
         self._browser: Browser | None = None
         self._context: BrowserContext | None = None
@@ -36,9 +38,15 @@ class BrowserSession:
 
     async def start(self, headless: bool = True) -> None:
         """Start the browser. If cookies exist, restore session. Otherwise open headed for login."""
-        DATA_DIR.mkdir(parents=True, exist_ok=True)
+        self._cookies_path.parent.mkdir(parents=True, exist_ok=True)
 
-        has_cookies = COOKIES_PATH.exists() and COOKIES_PATH.stat().st_size > 10
+        has_cookies = self._cookies_path.exists() and self._cookies_path.stat().st_size > 10
+        if not has_cookies and self._global_cookies_path != self._cookies_path:
+            if self._global_cookies_path.exists() and self._global_cookies_path.stat().st_size > 10:
+                import shutil
+                shutil.copy2(self._global_cookies_path, self._cookies_path)
+                logger.info("Copied global LinkedIn cookies to session.")
+                has_cookies = True
 
         if not has_cookies:
             logger.info("No saved cookies found. Starting headed browser for manual login...")
@@ -125,18 +133,22 @@ class BrowserSession:
         logger.info("Cookies saved successfully.")
 
     async def _save_cookies(self) -> None:
-        """Save current browser cookies to disk."""
+        """Save current browser cookies to disk (session + global)."""
         if self._context is None:
             return
         cookies = await self._context.cookies()
-        COOKIES_PATH.write_text(json.dumps(cookies, indent=2, ensure_ascii=False))
-        logger.info(f"Saved {len(cookies)} cookies to {COOKIES_PATH}")
+        data = json.dumps(cookies, indent=2, ensure_ascii=False)
+        self._cookies_path.write_text(data)
+        if self._global_cookies_path != self._cookies_path:
+            self._global_cookies_path.parent.mkdir(parents=True, exist_ok=True)
+            self._global_cookies_path.write_text(data)
+        logger.info(f"Saved {len(cookies)} cookies.")
 
     async def _restore_cookies(self) -> None:
         """Restore cookies from disk into the browser context."""
-        if self._context is None or not COOKIES_PATH.exists():
+        if self._context is None or not self._cookies_path.exists():
             return
-        cookies = json.loads(COOKIES_PATH.read_text())
+        cookies = json.loads(self._cookies_path.read_text())
         await self._context.add_cookies(cookies)
         logger.info(f"Restored {len(cookies)} cookies.")
 

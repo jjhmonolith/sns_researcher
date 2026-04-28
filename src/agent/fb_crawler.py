@@ -1,4 +1,4 @@
-"""X (Twitter) crawling loop - mirrors LinkedIn crawler architecture."""
+"""Facebook crawling loop — mbasic.facebook.com with stealth."""
 
 from __future__ import annotations
 
@@ -6,42 +6,30 @@ import asyncio
 import logging
 from datetime import datetime
 
-from src.browser.x_session import XBrowserSession
-from src.browser.x_navigator import XNavigator
-from src.browser.x_extractor import XContentExtractor
+from src.browser.fb_session import FBBrowserSession
+from src.browser.fb_navigator import FBNavigator
+from src.browser.fb_extractor import FBContentExtractor
 from src.agent.relevance import RelevanceJudge
-from src.agent.synthesizer import KnowledgeSynthesizer
-from src.agent.weekly_synthesizer import WeeklySynthesizer
-from src.agent.monthly_synthesizer import MonthlySynthesizer
 from src.knowledge.store import KnowledgeStore
 from src.knowledge.queue import ExplorationQueue
 from src.knowledge.followed_authors import FollowedAuthors
 from src.knowledge.models import (
-    AgentStats,
-    AgentStatus,
-    ActivityLog,
-    LinkedInPost,
-    QueueItemType,
-    TokenUsage,
+    AgentStats, AgentStatus, ActivityLog, LinkedInPost, TokenUsage,
 )
-from src.config import get_settings, ensure_dirs
 from src.knowledge.persistent_stats import save_stats, restore_stats
+from src.config import get_settings, ensure_dirs
 
 logger = logging.getLogger(__name__)
 
-# X-specific search keywords (can overlap with LinkedIn keywords)
-X_SEARCH_KEYWORDS = [
+FB_SEARCH_KEYWORDS = [
     "AI transformation enterprise",
     "enterprise AI adoption",
-    "agentic AI",
-    "기업 AI 도입",
-    "AI agent 업무자동화",
     "generative AI business",
 ]
 
 
-class XCrawler:
-    """Crawls X/Twitter for AX-related content. Shares knowledge base with LinkedIn crawler."""
+class FBCrawler:
+    """Crawls Facebook for research content. Uses mbasic for stealth."""
 
     def __init__(
         self,
@@ -56,7 +44,7 @@ class XCrawler:
 
         if session_config:
             session_config.ensure_dirs()
-            self.session = XBrowserSession(cookies_path=session_config.cookies_x_path)
+            self.session = FBBrowserSession(cookies_path=session_config.cookies_fb_path)
             self.store = store or KnowledgeStore(base_dir=session_config.knowledge_dir)
             self.queue = queue or ExplorationQueue(file_path=session_config.queue_path)
             self.followed_authors = followed_authors or FollowedAuthors(file_path=session_config.followed_authors_path)
@@ -66,12 +54,12 @@ class XCrawler:
             topic = session_config.topic_description
         else:
             ensure_dirs()
-            self.session = XBrowserSession()
+            self.session = FBBrowserSession()
             self.store = store or KnowledgeStore()
             self.queue = queue or ExplorationQueue()
             self.followed_authors = followed_authors or FollowedAuthors()
             self.token_usage = token_usage or TokenUsage()
-            self._keywords = list(X_SEARCH_KEYWORDS)
+            self._keywords = list(FB_SEARCH_KEYWORDS)
             self._stats_file = None
             topic = ""
 
@@ -82,7 +70,6 @@ class XCrawler:
             store=self.store,
         )
 
-        # State
         self.stats = AgentStats()
         self.activity_log: list[ActivityLog] = []
         self._pending_relevant_posts: list[LinkedInPost] = []
@@ -96,16 +83,15 @@ class XCrawler:
 
     def request_stop(self) -> None:
         self._stop_requested = True
-        self._log("info", "stop_requested", "[X] Graceful stop requested")
+        self._log("info", "stop_requested", "[FB] Graceful stop requested")
 
     def request_pause(self) -> None:
         self._pause_requested = not self._pause_requested
         state = "paused" if self._pause_requested else "resumed"
-        self._log("info", state, f"[X] Agent {state}")
+        self._log("info", state, f"[FB] Agent {state}")
 
     async def run(self) -> None:
-        """Main entry point — runs the X crawling lifecycle."""
-        restore_stats(self.stats, self.token_usage, platform="x", stats_file=self._stats_file)
+        restore_stats(self.stats, self.token_usage, platform="facebook", stats_file=self._stats_file)
         self.stats.started_at = datetime.now().isoformat()
         if not self.stats.first_started_at:
             self.stats.first_started_at = self.stats.started_at
@@ -114,15 +100,15 @@ class XCrawler:
         self._saved_post_ids = self.store.get_all_post_ids()
 
         try:
-            self._log("info", "starting", "[X] Starting browser session...")
+            self._log("info", "starting", "[FB] Starting browser session...")
             self.stats.status = AgentStatus.WAITING_LOGIN
             await self.session.start(headless=True)
 
             self.stats.status = AgentStatus.RUNNING
-            self._log("info", "logged_in", "[X] Logged in. Starting crawl loop.")
+            self._log("info", "logged_in", "[FB] Logged in. Starting crawl loop.")
 
-            navigator = XNavigator(self.session.page)
-            extractor = XContentExtractor(self.session.page)
+            navigator = FBNavigator(self.session.page)
+            extractor = FBContentExtractor(self.session.page)
 
             cycle = 0
             while not self._stop_requested:
@@ -135,106 +121,71 @@ class XCrawler:
 
                 self.stats.status = AgentStatus.RUNNING
                 cycle += 1
-                self._log("info", "cycle_start", f"[X] Cycle {cycle}")
+                self._log("info", "cycle_start", f"[FB] Cycle {cycle}")
 
                 try:
                     if await navigator.is_rate_limited():
-                        self._log("warning", "rate_limited", "[X] Rate limit detected!")
+                        self._log("warning", "rate_limited", "[FB] Rate limit detected!")
                         await navigator.handle_rate_limit()
                         continue
 
-                    # Phase 1: Home feed
+                    # Phase 1: News feed
                     await self._scan_feed(navigator, extractor)
 
                     # Phase 2: Keyword search (rotate)
-                    keyword_idx = (cycle - 1) % len(self._keywords)
-                    keyword = self._keywords[keyword_idx]
-                    await self._scan_search(navigator, extractor, keyword)
-
-                    # Phase 3: Followed authors (shared with LinkedIn)
-                    await self._visit_followed_authors(navigator, extractor)
+                    if self._keywords:
+                        keyword_idx = (cycle - 1) % len(self._keywords)
+                        keyword = self._keywords[keyword_idx]
+                        await self._scan_search(navigator, extractor, keyword)
 
                     # Refresh cookies
-                    if cycle % 5 == 0:
+                    if cycle % 3 == 0:
                         await self.session.refresh_cookies()
 
-                    self.stats.token_usage = self.token_usage
-
                     if cycle % 5 == 0:
-                        save_stats(self.stats, platform="x", stats_file=self._stats_file)
+                        save_stats(self.stats, platform="facebook", stats_file=self._stats_file)
 
-                    self._log("info", "cycle_end", f"[X] Cycle {cycle} complete.")
+                    self._log("info", "cycle_end", f"[FB] Cycle {cycle} complete.")
+                    # Extra long delay for Facebook
                     await navigator.random_delay()
 
                 except Exception as e:
-                    self._log("error", "cycle_error", f"[X] Error in cycle {cycle}: {e}")
-                    await asyncio.sleep(60)
+                    self._log("error", "cycle_error", f"[FB] Error in cycle {cycle}: {e}")
+                    await asyncio.sleep(120)
 
         except Exception as e:
             self.stats.status = AgentStatus.ERROR
-            self._log("error", "fatal_error", f"[X] Fatal error: {e}")
+            self._log("error", "fatal_error", f"[FB] Fatal error: {e}")
             raise
         finally:
-            save_stats(self.stats, platform="x", stats_file=self._stats_file)
+            save_stats(self.stats, platform="facebook", stats_file=self._stats_file)
             self.stats.status = AgentStatus.STOPPED
             await self.session.stop()
-            self._log("info", "stopped", "[X] Agent stopped.")
+            self._log("info", "stopped", "[FB] Agent stopped.")
 
-    async def _scan_feed(self, navigator: XNavigator, extractor: XContentExtractor) -> None:
-        self.stats.current_action = "[X] Scanning home feed"
-        self._log("info", "x_feed_scan", "[X] Scanning home feed...")
+    async def _scan_feed(self, navigator: FBNavigator, extractor: FBContentExtractor) -> None:
+        self.stats.current_action = "[FB] Scanning news feed"
+        self._log("info", "fb_feed_scan", "[FB] Scanning news feed...")
         await navigator.go_to_feed()
-        await navigator.scroll_feed(scroll_count=4)
+        await navigator.scroll_feed(scroll_count=3)
+        await navigator.expand_all_posts()
         posts = await extractor.extract_feed_posts()
         await self._process_posts(posts)
         await navigator.short_delay()
 
     async def _scan_search(
-        self, navigator: XNavigator, extractor: XContentExtractor, keyword: str
+        self, navigator: FBNavigator, extractor: FBContentExtractor, keyword: str
     ) -> None:
-        self.stats.current_action = f"[X] Searching: {keyword}"
-        self._log("info", "x_search_scan", f"[X] Searching: {keyword}")
+        self.stats.current_action = f"[FB] Searching: {keyword}"
+        self._log("info", "fb_search_scan", f"[FB] Searching: {keyword}")
         await navigator.search_posts(keyword)
-        await asyncio.sleep(3)
-        await navigator.scroll_feed(scroll_count=3)
+        await navigator.scroll_feed(scroll_count=2)
+        await navigator.expand_all_posts()
         posts = await extractor.extract_search_results()
         await self._process_posts(posts)
         await navigator.short_delay()
 
-    async def _visit_followed_authors(
-        self, navigator: XNavigator, extractor: XContentExtractor
-    ) -> None:
-        """Visit followed authors that have X profiles."""
-        authors = self.followed_authors.pick_for_visit(count=1)
-        for author_info in authors:
-            if self._stop_requested:
-                break
-            url = author_info.get("profile_url", "")
-            # Only visit X profiles (skip LinkedIn profiles)
-            if "x.com" not in url and "twitter.com" not in url:
-                continue
-            name = author_info.get("name", url[:40])
-            self.stats.current_action = f"[X] Following: {name}"
-            self._log("info", "x_follow_visit", f"[X] Visiting: {name}")
-            try:
-                # Follow on X if not yet followed
-                if self.followed_authors.needs_platform_follow(url):
-                    followed = await navigator.follow_user(url)
-                    if followed:
-                        self.followed_authors.mark_platform_followed(url)
-                        self._log("info", "x_platform_follow", f"[X] Followed: {name}")
-                    await navigator.short_delay()
-
-                await navigator.go_to_profile(url)
-                posts = await extractor.extract_profile_posts()
-                await self._process_posts(posts)
-                self.followed_authors.record_visit(url)
-            except Exception as e:
-                self._log("error", "x_follow_error", f"[X] Failed: {e}")
-            await navigator.short_delay()
-
     async def _process_posts(self, posts: list[LinkedInPost]) -> None:
-        """Judge novelty and save relevant posts."""
         for post in posts:
             if self._stop_requested:
                 break
@@ -248,34 +199,24 @@ class XCrawler:
                 self.stats.relevant_posts_found += 1
                 self.store.save_post(post)
                 self._saved_post_ids.add(post.post_id)
-                self._pending_relevant_posts.append(post)
                 self._log(
-                    "info", "x_relevant_post",
-                    f"[X] [N:{post.novelty_score}] {post.author.name}: {post.summary[:60]}",
+                    "info", "fb_relevant_post",
+                    f"[FB] [N:{post.novelty_score}] {post.author.name}: {post.summary[:60]}",
                 )
-                self._enqueue_follow_targets(post)
+
+                # Register author for following
+                if post.author.profile_url:
+                    self.followed_authors.add(
+                        profile_url=post.author.profile_url,
+                        name=post.author.name,
+                        headline="",
+                    )
+
                 if post.url:
                     self.queue.mark_visited(post.url)
             else:
                 if post.url:
                     self.queue.mark_visited(post.url)
-
-    def _enqueue_follow_targets(self, post: LinkedInPost) -> None:
-        """Add X profiles from relevant posts to followed authors."""
-        if post.author.profile_url and ("x.com" in post.author.profile_url or "twitter.com" in post.author.profile_url):
-            self.followed_authors.add(
-                profile_url=post.author.profile_url,
-                name=post.author.name,
-                headline=post.author.headline,
-            )
-        for profile_url in post.mentioned_profiles[:5]:
-            if "x.com" in profile_url or "twitter.com" in profile_url:
-                self.queue.add_profile(
-                    url=profile_url,
-                    priority=max(post.relevance_score - 10, 25),
-                    source_post_id=post.post_id,
-                    reason="[X] Mentioned in relevant tweet",
-                )
 
     def _log(self, level: str, action: str, detail: str) -> None:
         entry = ActivityLog(action=action, detail=detail, level=level)
@@ -291,7 +232,7 @@ class XCrawler:
 
     def get_status_dict(self) -> dict:
         return {
-            "platform": "x",
+            "platform": "facebook",
             "status": self.stats.status.value,
             "started_at": self.stats.started_at,
             "total_posts_scanned": self.stats.total_posts_scanned,

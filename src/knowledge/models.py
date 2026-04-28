@@ -27,6 +27,10 @@ class CrawlSource(str, Enum):
     X_FEED = "x_feed"
     X_SEARCH = "x_search"
     X_PROFILE = "x_profile"
+    FB_FEED = "fb_feed"
+    FB_SEARCH = "fb_search"
+    FB_GROUP = "fb_group"
+    FB_PROFILE = "fb_profile"
 
 
 class QueueItemType(str, Enum):

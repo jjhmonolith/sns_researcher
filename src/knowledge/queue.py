@@ -17,7 +17,8 @@ QUEUE_FILE = KNOWLEDGE_DIR / "queue.json"
 class ExplorationQueue:
     """Priority queue for URLs to explore, persisted to disk."""
 
-    def __init__(self) -> None:
+    def __init__(self, file_path: Path | None = None) -> None:
+        self._file_path = file_path or (KNOWLEDGE_DIR / "queue.json")
         self._items: list[QueueItem] = []
         self._visited_urls: set[str] = set()
         self._mention_counts: dict[str, int] = {}
@@ -25,9 +26,9 @@ class ExplorationQueue:
 
     def _load(self) -> None:
         """Load queue state from disk."""
-        if QUEUE_FILE.exists():
+        if self._file_path.exists():
             try:
-                data = json.loads(QUEUE_FILE.read_text())
+                data = json.loads(self._file_path.read_text())
                 self._items = [QueueItem(**item) for item in data.get("items", [])]
                 self._visited_urls = set(data.get("visited_urls", []))
                 self._mention_counts = data.get("mention_counts", {})
@@ -47,13 +48,13 @@ class ExplorationQueue:
 
     def _save(self) -> None:
         """Persist queue state to disk."""
-        QUEUE_FILE.parent.mkdir(parents=True, exist_ok=True)
+        self._file_path.parent.mkdir(parents=True, exist_ok=True)
         data = {
             "items": [item.model_dump() for item in self._items[-1000:]],  # Keep last 1000
             "visited_urls": list(self._visited_urls)[-5000:],  # Keep last 5000
             "mention_counts": dict(list(self._mention_counts.items())[-2000:]),
         }
-        QUEUE_FILE.write_text(json.dumps(data, indent=2, ensure_ascii=False))
+        self._file_path.write_text(json.dumps(data, indent=2, ensure_ascii=False))
 
     @property
     def pending_items(self) -> list[QueueItem]:

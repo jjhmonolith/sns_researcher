@@ -82,40 +82,34 @@
       "relevant_post_count": 2
     },
     {
-      "profile_url": "https://www.linkedin.com/in/youxnah",
-      "name": "Yuna Hong",
-      "headline": "Co-founder @ThePlato & Building tiro.ooo | ex-VC | Serial Entrepreneur",
-      "first_seen": "2026-04-17T14:24:30.060250",
-      "last_visited": "2026-04-18T08:44:58.542682",
-      "visit_count": 10,
-      "relevant_post_count": 2
+      "profile_url": "https://www.linkedin.com/in/json-lee",
+      "name": "Jason J. Lee",
+      "headline": "Researcher@Developer Academy | M.S in Software Dev | Ph.D candidates in Design Plannings | Deep Learning Enthusiast | BigData Analytics | Statistics | Pedagogy",
+      "first_seen": "2026-04-17T14:24:51.258528",
+      "last_visited": "2026-04-22T12:51:49.731569",
+      "visit_count": 11,
+      "relevant_post_count": 2,
+      "platform_followed": true
     },
     {
       "profile_url": "https://www.linkedin.com/in/aleksandar-stojanovic-msc",
       "name": "Alex Stojanovic, MSc.",
       "headline": "Helping tech founders make smarter financial decisions (and scale like Usercentrics to €100M ARR) | Fractional CFO & FP&A Advisor",
       "first_seen": "2026-04-18T00:38:30.220467",
-      "last_visited": "2026-04-18T08:50:00.413447",
-      "visit_count": 5,
-      "relevant_post_count": 2
+      "last_visited": "2026-04-22T12:56:33.313008",
+      "visit_count": 6,
+      "relevant_post_count": 2,
+      "platform_followed": true
     },
     {
-      "profile_url": "https://www.linkedin.com/in/json-lee",
-      "name": "Jason J. Lee",
-      "headline": "Researcher@Developer Academy | M.S in Software Dev | Ph.D candidates in Design Plannings | Deep Learning Enthusiast | BigData Analytics | Statistics | Pedagogy",
-      "first_seen": "2026-04-17T14:24:51.258528",
-      "last_visited": "2026-04-18T08:52:31.833710",
-      "visit_count": 10,
-      "relevant_post_count": 2
-    },
-    {
-      "profile_url": "https://www.linkedin.com/in/%EC%84%B1%EA%B5%AD-%ED%95%9C-5b433128a",
-      "name": "한성국",
-      "headline": "AI 에이전트로 혼자서도 팀처럼 일할 수 있습니다",
-      "first_seen": "2026-04-18T02:45:36.046129",
-      "last_visited": "2026-04-18T08:56:12.107610",
-      "visit_count": 4,
-      "relevant_post_count": 2
+      "profile_url": "https://www.linkedin.com/in/youxnah",
+      "name": "Yuna Hong",
+      "headline": "Co-founder @ThePlato & Building tiro.ooo | ex-VC | Serial Entrepreneur",
+      "first_seen": "2026-04-17T14:24:30.060250",
+      "last_visited": "2026-04-22T12:57:09.626502",
+      "visit_count": 11,
+      "relevant_post_count": 2,
+      "platform_followed": true
     },
     {
       "profile_url": "https://x.com/Mhcandan",
@@ -328,6 +322,16 @@
       "platform_followed": true
     },
     {
+      "profile_url": "https://www.linkedin.com/in/%EC%84%B1%EA%B5%AD-%ED%95%9C-5b433128a",
+      "name": "한성국",
+      "headline": "AI 에이전트로 혼자서도 팀처럼 일할 수 있습니다",
+      "first_seen": "2026-04-18T02:45:36.046129",
+      "last_visited": "2026-04-22T12:51:17.485242",
+      "visit_count": 5,
+      "relevant_post_count": 4,
+      "platform_followed": true
+    },
+    {
       "profile_url": "https://www.linkedin.com/in/seyun-kim-5ab15b1b6",
       "name": "Seyun Kim",
       "headline": "Software engineer",
@@ -478,13 +482,13 @@
       "platform_followed": true
     },
     {
-      "profile_url": "https://www.linkedin.com/in/jyoung105",
-      "name": "Jeongmin Lee",
-      "headline": "Control opinions with AI",
-      "first_seen": "2026-04-22T12:43:18.531720",
+      "profile_url": "https://www.linkedin.com/in/deepesh-puri",
+      "name": "Deepesh Puri",
+      "headline": "Turning data into decisions | Data Analytics Architecture & Strategy",
+      "first_seen": "2026-04-22T12:58:32.073884",
       "last_visited": "",
       "visit_count": 0,
-      "relevant_post_count": 2,
+      "relevant_post_count": 1,
       "platform_followed": false
     }
   ]
